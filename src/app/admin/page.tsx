@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Dashboard Admin" };
 
 export default async function AdminDashboardPage() {
   let totalOrdersResult = { count: 0 };
-  let revenueResult = { total: 0 };
+  let revenueResult: { total: string | null } = { total: "0" };
   let pendingResult = { count: 0 };
   let completedResult = { count: 0 };
 
