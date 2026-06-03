@@ -35,8 +35,7 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# drizzle migrations output
-drizzle/
+# drizzle (tracked for migrations)
 
 # vercel
 .vercel
