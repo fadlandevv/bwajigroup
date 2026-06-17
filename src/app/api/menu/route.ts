@@ -4,7 +4,6 @@ import { menuItems } from "@/lib/db/schema";
 import { menuItemSchema } from "@/lib/validations/menu";
 import { auth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
-import { dummyMenuDapurBwaji, dummyMenuHokiDimsum } from "@/lib/data/dummy-menu";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,18 +15,10 @@ export async function GET(req: NextRequest) {
       ? await query.where(eq(menuItems.brandSlug, brandSlug as "dapur-bwaji" | "hoki-dimsum"))
       : await query;
 
-    if (result.length > 0) return NextResponse.json(result);
+    return NextResponse.json(result);
   } catch {
-    // DB unavailable — fall through to dummy data
+    return NextResponse.json([], { status: 200 });
   }
-
-  const fallback = brandSlug === "hoki-dimsum"
-    ? dummyMenuHokiDimsum
-    : brandSlug === "dapur-bwaji"
-    ? dummyMenuDapurBwaji
-    : [...dummyMenuDapurBwaji, ...dummyMenuHokiDimsum];
-
-  return NextResponse.json(fallback);
 }
 
 export async function POST(req: NextRequest) {

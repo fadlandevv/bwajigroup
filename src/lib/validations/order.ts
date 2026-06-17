@@ -29,7 +29,7 @@ export const createOrderSchema = z
     items: z
       .array(
         z.object({
-          menuItemId: z.string().uuid(),
+          menuItemId: z.string().min(1),
           quantity: z.number().min(1).max(99),
         })
       )

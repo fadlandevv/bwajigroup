@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed,
-  Copy, CheckCircle2, CheckCircle, Clock, Search,
+  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { BRANDS } from "@/types/brand";
@@ -152,11 +152,16 @@ export function OrderApp() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [proofUploading, setProofUploading] = useState(false);
+  const [proofUploaded, setProofUploaded] = useState(false);
   const [historyPhone, setHistoryPhone] = useState("");
   const [historyOrders, setHistoryOrders] = useState<OrderHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historySearched, setHistorySearched] = useState(false);
+  const [lastOrderPhone, setLastOrderPhone] = useState<string | null>(null);
 
   const { items, addItem, updateQuantity, getTotalItems, getTotalPrice, clearCart } = useCartStore();
 
@@ -196,6 +201,19 @@ export function OrderApp() {
     };
     load();
   }, [selectedBrand]);
+
+  // Auto-search history when navigating there after an order
+  useEffect(() => {
+    if (view === "history" && lastOrderPhone && !historySearched) {
+      setHistoryPhone(lastOrderPhone);
+      setHistoryLoading(true);
+      fetch(`/api/orders?phone=${encodeURIComponent(lastOrderPhone)}`)
+        .then((r) => r.json())
+        .then((data) => { setHistoryOrders(data); setHistorySearched(true); })
+        .catch(() => setHistorySearched(true))
+        .finally(() => setHistoryLoading(false));
+    }
+  }, [view, lastOrderPhone, historySearched]);
 
   const getQty = (id: string) => items.find((i) => i.menuItem.id === id)?.quantity ?? 0;
 
@@ -267,17 +285,14 @@ export function OrderApp() {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   async function onCheckoutSubmit(data: CheckoutFormData) {
-    // Manual delivery address check (skips ZodEffects complexity)
     if (data.deliveryType === "delivery" && (!data.deliveryAddress || data.deliveryAddress.trim().length < 10)) {
       setError("deliveryAddress", { message: "Alamat pengiriman wajib diisi (minimal 10 karakter)" });
       return;
     }
 
-    // Guard: items from public brand pages use dummy IDs (non-UUID). Detect and clear.
     const hasDummyItems = items.some((i) => !UUID_RE.test(i.menuItem.id));
     if (hasDummyItems) {
       clearCart();
-      alert("Keranjang berisi item lama yang tidak valid. Keranjang sudah dikosongkan — silakan tambah menu lagi dari tab Menu.");
       setView("menu");
       return;
     }
@@ -299,14 +314,23 @@ export function OrderApp() {
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         console.error("API Error", res.status, JSON.stringify(err));
-        alert(`Gagal (${res.status}): ${err?.error ? JSON.stringify(err.error) : "Server error, coba lagi."}`);
+        if (res.status === 500) {
+          alert("Server sedang tidak bisa dihubungi. Database mungkin sedang tidak aktif — coba beberapa menit lagi.");
+        } else {
+          alert(`Gagal membuat pesanan (${res.status}). Coba refresh halaman dan pesan ulang.`);
+        }
         return;
       }
 
+      const order = await res.json();
       const amount = getTotalPrice();
       clearCart();
+      setLastOrderPhone(data.customerPhone);
       if (data.paymentMethod === "qris") {
+        setOrderId(order.id ?? null);
         setTotalAmount(amount);
+        setProofPreview(null);
+        setProofUploaded(false);
         setView("payment");
       } else {
         setView("success");
@@ -323,6 +347,47 @@ export function OrderApp() {
     navigator.clipboard.writeText(String(totalAmount));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function compressImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1200;
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  async function handleProofUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !orderId) return;
+    setProofUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      setProofPreview(compressed);
+      const res = await fetch(`/api/orders/${orderId}/proof`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentProof: compressed }),
+      });
+      if (res.ok) setProofUploaded(true);
+      else alert("Gagal mengunggah bukti. Coba lagi.");
+    } catch {
+      alert("Gagal memproses gambar. Pastikan file adalah gambar yang valid.");
+    } finally {
+      setProofUploading(false);
+    }
   }
 
   async function searchHistory() {
@@ -436,10 +501,11 @@ export function OrderApp() {
                     {availableItems.slice(0, 5).map((item) => (
                       <MenuCard key={item.id} item={item} brand={brand} qty={getQty(item.id)} onAdd={() => addItem(item)} onDec={() => updateQuantity(item.id, getQty(item.id) - 1)} />
                     ))}
-                    {availableItems.length === 0 && (
+                    {availableItems.length === 0 && !loading && (
                       <div className="flex flex-col items-center gap-2 py-12">
-                        <span className="text-3xl">🍽️</span>
-                        <p className="text-sm text-gray-400">Belum ada menu tersedia</p>
+                        <span className="text-3xl">🔧</span>
+                        <p className="text-sm font-medium text-gray-500">Menu sedang disiapkan</p>
+                        <p className="text-xs text-gray-400">Coba lagi beberapa saat</p>
                       </div>
                     )}
                   </div>
@@ -475,8 +541,9 @@ export function OrderApp() {
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-20">
-                <span className="text-4xl">🍽️</span>
-                <p className="text-sm text-gray-400">Belum ada menu tersedia</p>
+                <span className="text-4xl">🔧</span>
+                <p className="text-sm font-medium text-gray-500">Menu sedang disiapkan</p>
+                <p className="text-xs text-gray-400">Coba lagi beberapa saat</p>
               </div>
             ) : (
               <div className="mx-4 my-4 divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white px-4 shadow-sm">
@@ -745,7 +812,9 @@ export function OrderApp() {
                 <p className="text-xs text-gray-400">Langkah terakhir</p>
               </div>
             </div>
-            <div className="flex flex-1 flex-col items-center justify-start overflow-y-auto px-6 py-6 gap-5">
+
+            <div className="flex flex-1 flex-col overflow-y-auto px-5 py-5 gap-4">
+              {/* Nominal */}
               <div className="w-full rounded-2xl border border-orange-100 bg-orange-50 px-5 py-4 text-center">
                 <p className="text-xs font-semibold uppercase tracking-wider text-orange-400">Transfer tepat sebesar</p>
                 <p className="mt-1 text-4xl font-black" style={{ color: brand.primaryColor }}>{formatRupiah(totalAmount)}</p>
@@ -754,16 +823,76 @@ export function OrderApp() {
                   {copied ? "Disalin!" : "Salin nominal"}
                 </button>
               </div>
-              <div className="relative h-52 w-52 overflow-hidden rounded-2xl border-2 border-gray-200">
-                <Image src="/qris.svg" alt="QRIS Bwaji Group" fill className="object-contain p-2" />
+
+              {/* QR Code + Download */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative h-52 w-52 overflow-hidden rounded-2xl border-2 border-gray-200">
+                  <Image src="/qris.svg" alt="QRIS Bwaji Group" fill className="object-contain p-2" />
+                </div>
+                <a
+                  href="/qris.svg"
+                  download="qris-bwaji-group.svg"
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 active:scale-95 transition-transform"
+                >
+                  <Download size={15} />
+                  Unduh QR Code
+                </a>
               </div>
+
               <p className="text-center text-xs text-gray-400">
                 Pastikan nominal yang kamu transfer <span className="font-semibold text-gray-600">sama persis</span> agar pesanan langsung diproses.
               </p>
+
+              {/* Upload Bukti */}
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4">
+                <p className="mb-3 text-sm font-semibold text-[#1A0F0A]">Upload Bukti Pembayaran</p>
+
+                {proofPreview ? (
+                  <div className="space-y-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={proofPreview} alt="Bukti pembayaran" className="w-full rounded-xl object-cover max-h-48" />
+                    {proofUploaded ? (
+                      <div className="flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2">
+                        <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
+                        <p className="text-xs font-medium text-green-700">Bukti berhasil dikirim!</p>
+                      </div>
+                    ) : (
+                      <p className="text-center text-xs text-gray-400">Mengunggah...</p>
+                    )}
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-2 text-xs font-medium text-gray-500 hover:bg-gray-50">
+                      <ImageIcon size={13} />
+                      Ganti foto
+                      <input type="file" accept="image/*" className="hidden" onChange={handleProofUpload} />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="flex cursor-pointer flex-col items-center gap-3 py-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
+                      {proofUploading ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200" style={{ borderTopColor: brand.primaryColor }} />
+                      ) : (
+                        <Upload size={22} className="text-gray-400" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-600">
+                        {proofUploading ? "Memproses..." : "Pilih screenshot pembayaran"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400">JPG, PNG, atau HEIC</p>
+                    </div>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleProofUpload} disabled={proofUploading} />
+                  </label>
+                )}
+              </div>
             </div>
+
             <div className="border-t border-gray-100 p-4">
-              <button onClick={() => setView("success")} className="w-full rounded-2xl py-4 text-sm font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
-                Saya Sudah Bayar ✓
+              <button
+                onClick={() => setView("success")}
+                className="w-full rounded-2xl py-4 text-sm font-bold text-white"
+                style={{ backgroundColor: brand.primaryColor }}
+              >
+                {proofUploaded ? "Selesai ✓" : "Saya Sudah Bayar →"}
               </button>
             </div>
           </div>
@@ -779,13 +908,24 @@ export function OrderApp() {
               <h2 className="text-xl font-black text-[#1A0F0A]" style={{ fontFamily: "var(--font-archivo)" }}>Pesanan Berhasil!</h2>
               <p className="mt-1.5 text-sm text-gray-500">Pesanan kamu sudah kami terima.<br />Kami akan segera memprosesnya.</p>
             </div>
-            <button
-              onClick={() => { setView("beranda"); }}
-              className="mt-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white"
-              style={{ backgroundColor: brand.primaryColor }}
-            >
-              Kembali ke Beranda
-            </button>
+            <div className="mt-2 flex w-full flex-col gap-3">
+              <button
+                onClick={() => {
+                  setHistorySearched(false);
+                  setView("history");
+                }}
+                className="w-full rounded-2xl py-3.5 text-sm font-bold text-white"
+                style={{ backgroundColor: brand.primaryColor }}
+              >
+                Lihat Status Pesananku
+              </button>
+              <button
+                onClick={() => setView("beranda")}
+                className="w-full rounded-2xl border border-gray-200 py-3.5 text-sm font-medium text-gray-600"
+              >
+                Kembali ke Beranda
+              </button>
+            </div>
           </div>
         )}
 
@@ -798,8 +938,12 @@ export function OrderApp() {
             {TABS.map(({ tab, Icon, label }) => {
               const isActive = view === tab;
               const showBadge = tab === "keranjang" && totalItems > 0;
+              const handleTabClick = () => {
+                if (tab === "history") setHistorySearched(false);
+                setView(tab);
+              };
               return (
-                <button key={tab} onClick={() => setView(tab)} className="flex flex-col items-center gap-1">
+                <button key={tab} onClick={handleTabClick} className="flex flex-col items-center gap-1">
                   <div className="relative">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors" style={isActive ? { backgroundColor: `${brand.primaryColor}18` } : {}}>
                       <Icon size={21} style={{ color: isActive ? brand.primaryColor : "#9ca3af" }} />
