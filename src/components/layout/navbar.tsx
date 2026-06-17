@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Utensils } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -9,41 +9,58 @@ export function Navbar() {
   const totalItems = useCartStore((s) => s.getTotalItems());
   const openCart = useCartStore((s) => s.openCart);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const handler = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", handler);
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
 
   return (
-    <header className="fixed left-4 right-4 top-3 z-50 lg:left-6 lg:right-6">
-      <div className="flex h-12 items-center rounded-full bg-[#93F3AA] px-5 lg:px-6">
-        {/* Logo */}
+    <header
+      className={`fixed left-0 right-0 top-0 z-50 bg-[#FFFCF8] transition-all duration-200 ${
+        scrolled ? "shadow-md shadow-black/5" : "border-b border-[#E8D5C0]"
+      }`}
+    >
+      <div className="mx-auto flex h-16 max-w-6xl items-center px-5 lg:px-8">
         <Link
           href="/"
-          className="mr-auto text-sm font-black tracking-tight text-[#1D1A40]"
+          className="mr-auto text-lg font-black tracking-tight text-[#1A0F0A]"
           style={{ fontFamily: "var(--font-archivo)" }}
         >
-          B/G
+          Bwaji<span className="text-[#C0272D]">Group</span>
         </Link>
 
-        {/* Nav links */}
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 md:flex">
-          <Link href="/" className="text-sm font-medium text-[#1D1A40]/60 hover:text-[#1D1A40] transition-colors">
+        <nav className="hidden items-center gap-8 md:flex">
+          <Link href="/" className="text-sm font-medium text-[#7A6955] transition-colors hover:text-[#1A0F0A]">
             Home
           </Link>
-          <Link href="/dapur-bwaji" className="text-sm font-medium text-[#1D1A40]/60 hover:text-[#1D1A40] transition-colors">
-            Menu
+          <Link href="/produk" className="text-sm font-medium text-[#7A6955] transition-colors hover:text-[#1A0F0A]">
+            Produk
           </Link>
-          <Link href="/about" className="text-sm font-medium text-[#1D1A40]/60 hover:text-[#1D1A40] transition-colors">
+          <Link href="/about" className="text-sm font-medium text-[#7A6955] transition-colors hover:text-[#1A0F0A]">
             Tentang
           </Link>
         </nav>
 
-        {/* Cart */}
+        <Link
+          href="/pesan"
+          className="ml-8 inline-flex items-center gap-1.5 rounded-full bg-[#C0272D] px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-85"
+        >
+          <Utensils size={14} />
+          <span className="hidden sm:inline">Pesan Sekarang</span>
+          <span className="sm:hidden">Pesan</span>
+        </Link>
+
         <button
           onClick={openCart}
-          className="relative ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#1D1A40] text-white transition-opacity hover:opacity-75"
+          className="relative ml-3 flex h-9 w-9 items-center justify-center rounded-full border border-[#E8D5C0] text-[#7A6955] transition-colors hover:bg-[#FAF3EB]"
         >
-          <ShoppingCart size={14} />
+          <ShoppingCart size={16} />
           {mounted && totalItems > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#F97316] text-[9px] font-bold text-white">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#C0272D] text-[10px] font-bold text-white">
               {totalItems}
             </span>
           )}

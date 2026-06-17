@@ -1,169 +1,143 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { BRANDS } from "@/types/brand";
-import { ArrowRight, Heart, Star, Users } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Tentang Kami",
+  title: "Tentang Kami | Bwaji Group",
   description: "Mengenal lebih dekat Bwaji Group dan brand-brand unggulan kami.",
 };
 
+const stats = [
+  { v: "2", l: "Brand Kuliner" },
+  { v: "50+", l: "Varian Menu" },
+  { v: "4.9★", l: "Rating Rata-rata" },
+  { v: "Daily", l: "Fresh Cook" },
+];
+
 const values = [
-  {
-    icon: Heart,
-    title: "Dibuat dengan Cinta",
-    desc: "Setiap hidangan kami dimasak dengan bahan pilihan dan penuh kasih sayang, seperti masakan rumah sendiri.",
-  },
-  {
-    icon: Star,
-    title: "Kualitas Tanpa Kompromi",
-    desc: "Kami memastikan standar bahan baku dan kebersihan dapur selalu terjaga di level tertinggi.",
-  },
-  {
-    icon: Users,
-    title: "Untuk Semua Kalangan",
-    desc: "Dari keluarga, sahabat, hingga momen spesial — kami hadir untuk menemani setiap momen makanmu.",
-  },
+  { num: "01", title: "Kualitas Tanpa Kompromi", desc: "Bahan segar pilihan dan bumbu terbaik di setiap hidangan, setiap hari." },
+  { num: "02", title: "Konsisten & Terpercaya", desc: "Standar rasa yang sama di setiap porsi. Tidak ada kompromi soal rasa." },
+  { num: "03", title: "Untuk Semua Kalangan", desc: "Harga terjangkau tanpa mengorbankan kualitas. Makanan enak adalah hak semua orang." },
 ];
 
 export default function AboutPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1">
+      <main>
 
-        {/* Hero */}
-        <section className="relative overflow-hidden bg-gray-900 px-4 py-28 text-center sm:px-6 lg:px-8">
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 30% 50%, #f97316 0%, transparent 60%), radial-gradient(circle at 70% 50%, #dc2626 0%, transparent 60%)",
-            }}
-          />
-          <div className="relative mx-auto max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-widest text-orange-400">
-              Tentang Kami
-            </p>
-            <h1 className="mt-3 text-5xl font-bold text-white sm:text-6xl">
-              Bwaji<span className="text-orange-400">Group</span>
+        {/* ── PAGE HEADER ── */}
+        <section className="bg-[#FAF3EB] px-5 pb-16 pt-32 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#C0272D]">Tentang Kami</span>
+            <h1
+              className="mt-3 text-5xl font-black leading-tight text-[#1A0F0A] sm:text-6xl"
+              style={{ fontFamily: "var(--font-archivo)", letterSpacing: "-0.02em" }}
+            >
+              Mengenal<br />Bwaji Group
             </h1>
-            <p className="mt-5 text-lg leading-relaxed text-gray-300">
-              Kami adalah grup kuliner yang berdedikasi menghadirkan pengalaman makan terbaik
-              melalui dua brand unggulan kami. Dari dapur rumahan yang hangat hingga hidangan
-              dimsum premium — semua ada di sini.
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-[#7A6955]">
+              Kami adalah grup kuliner yang lahir dari cinta mendalam terhadap makanan Indonesia — sederhana, tulus, dan selalu dibuat dengan sepenuh hati.
             </p>
           </div>
         </section>
 
-        {/* Cerita */}
-        <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-2 md:items-center">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-widest text-orange-500">
-                Cerita Kami
-              </p>
-              <h2 className="mt-2 text-3xl font-bold text-gray-900">
-                Berawal dari Dapur Kecil, Kini Melayani Ribuan Pelanggan
-              </h2>
-              <p className="mt-4 text-gray-500 leading-relaxed">
-                Bwaji Group lahir dari kecintaan mendalam terhadap kuliner Indonesia.
-                Bermula dari dapur rumahan yang sederhana, kami membangun dua brand
-                dengan karakter dan keunikan masing-masing — namun tetap terikat satu visi:
-                membawa kebahagiaan lewat makanan.
-              </p>
-              <p className="mt-3 text-gray-500 leading-relaxed">
-                Hari ini, Bwaji Group terus berkembang dengan semangat yang sama seperti hari
-                pertama — memasak dengan tulus, menyajikan dengan bangga.
-              </p>
+        {/* ── CERITA — image + text ── */}
+        <section className="bg-[#FFFCF8] px-5 py-16 lg:px-8">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 md:grid-cols-2">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#FAF3EB]">
+              <Image
+                src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&q=85"
+                alt="Dapur Bwaji"
+                fill
+                className="object-cover"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl bg-orange-50 p-6 text-center">
-                <p className="text-4xl font-bold text-orange-500">2+</p>
-                <p className="mt-1 text-sm text-gray-500">Brand Kuliner</p>
-              </div>
-              <div className="rounded-2xl bg-red-50 p-6 text-center">
-                <p className="text-4xl font-bold text-red-500">500+</p>
-                <p className="mt-1 text-sm text-gray-500">Menu Terjual / Hari</p>
-              </div>
-              <div className="rounded-2xl bg-yellow-50 p-6 text-center">
-                <p className="text-4xl font-bold text-yellow-500">1K+</p>
-                <p className="mt-1 text-sm text-gray-500">Pelanggan Setia</p>
-              </div>
-              <div className="rounded-2xl bg-green-50 p-6 text-center">
-                <p className="text-4xl font-bold text-green-500">4.9</p>
-                <p className="mt-1 text-sm text-gray-500">Rating Rata-rata</p>
-              </div>
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-widest text-[#C0272D]">Cerita Kami</span>
+              <h2
+                className="mt-3 text-4xl font-black leading-tight text-[#1A0F0A]"
+                style={{ fontFamily: "var(--font-archivo)" }}
+              >
+                Dari Dapur Kecil, Kini Melayani Ribuan
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-[#7A6955]">
+                Bwaji Group lahir dari kecintaan mendalam terhadap kuliner Indonesia. Bermula dari dapur rumahan yang sederhana, kami membangun dua brand dengan karakter masing-masing — namun tetap terikat satu visi: membawa kebahagiaan lewat makanan.
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-[#7A6955]">
+                Hari ini, Bwaji Group terus berkembang dengan semangat yang sama seperti hari pertama — memasak dengan tulus, menyajikan dengan bangga.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Nilai */}
-        <section className="bg-gray-50 px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl">
-            <div className="text-center">
-              <p className="text-sm font-semibold uppercase tracking-widest text-orange-500">
-                Nilai Kami
-              </p>
-              <h2 className="mt-2 text-3xl font-bold text-gray-900">
+        {/* ── STATS ── */}
+        <div className="border-y border-[#E8D5C0] bg-[#FAF3EB]">
+          <div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-[#E8D5C0] px-5 sm:grid-cols-4 lg:px-8">
+            {stats.map(({ v, l }) => (
+              <div key={l} className="py-10 text-center">
+                <p
+                  className="text-4xl font-black text-[#1A0F0A]"
+                  style={{ fontFamily: "var(--font-archivo)" }}
+                >
+                  {v}
+                </p>
+                <p className="mt-2 text-sm text-[#7A6955]">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── NILAI ── */}
+        <section className="bg-[#FFFCF8] px-5 py-16 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-12">
+              <span className="text-xs font-semibold uppercase tracking-widest text-[#C0272D]">Nilai Kami</span>
+              <h2
+                className="mt-3 text-4xl font-black text-[#1A0F0A]"
+                style={{ fontFamily: "var(--font-archivo)" }}
+              >
                 Mengapa Memilih Bwaji Group?
               </h2>
             </div>
-            <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-3">
-              {values.map(({ icon: Icon, title, desc }) => (
-                <div key={title} className="text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100">
-                    <Icon size={24} className="text-orange-500" />
-                  </div>
-                  <h3 className="mt-4 font-semibold text-gray-900">{title}</h3>
-                  <p className="mt-2 text-sm text-gray-500 leading-relaxed">{desc}</p>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              {values.map(({ num, title, desc }) => (
+                <div key={num} className="rounded-2xl border border-[#E8D5C0] bg-white p-8">
+                  <p
+                    className="text-4xl font-black text-[#C0272D]/20"
+                    style={{ fontFamily: "var(--font-archivo)" }}
+                  >
+                    {num}
+                  </p>
+                  <h3 className="mt-4 font-bold text-[#1A0F0A]">{title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#7A6955]">{desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Brand Cards */}
-        <section className="mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-orange-500">
-              Brand Kami
-            </p>
-            <h2 className="mt-2 text-3xl font-bold text-gray-900">
-              Dua Brand, Satu Semangat
+        {/* ── CTA ── */}
+        <section className="bg-[#FAF3EB] px-5 py-16 lg:px-8">
+          <div className="mx-auto max-w-6xl text-center">
+            <h2
+              className="text-3xl font-black text-[#1A0F0A]"
+              style={{ fontFamily: "var(--font-archivo)" }}
+            >
+              Siap Mencoba?
             </h2>
-          </div>
-          <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-            {BRANDS.map((brand) => (
-              <Link
-                key={brand.slug}
-                href={`/${brand.slug}`}
-                className="group relative overflow-hidden rounded-2xl p-8 text-white transition-transform hover:-translate-y-1 hover:shadow-xl"
-                style={{ backgroundColor: brand.primaryColor }}
-              >
-                <div
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage: `radial-gradient(circle at 80% 20%, ${brand.accentColor}, transparent 60%)`,
-                  }}
-                />
-                <div className="relative">
-                  <p className="text-sm font-semibold uppercase tracking-widest opacity-80">
-                    Bwaji Group
-                  </p>
-                  <h3 className="mt-1 text-2xl font-bold">{brand.name}</h3>
-                  <p className="mt-3 text-sm leading-relaxed opacity-90">
-                    {brand.description}
-                  </p>
-                  <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold">
-                    Lihat Menu
-                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-                  </div>
-                </div>
-              </Link>
-            ))}
+            <p className="mt-3 text-sm text-[#7A6955]">
+              Temukan menu terbaik dari dua brand unggulan kami.
+            </p>
+            <Link
+              href="/produk"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#C0272D] px-7 py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-85"
+            >
+              Lihat Produk Kami <ArrowRight size={15} />
+            </Link>
           </div>
         </section>
 
