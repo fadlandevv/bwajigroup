@@ -25,6 +25,8 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "qris",
 ]);
 
+export const deliveryTypeEnum = pgEnum("delivery_type", ["pickup", "delivery"]);
+
 export const roleEnum = pgEnum("user_role", ["admin", "staff"]);
 
 // ─── Users (admin) ───────────────────────────────────────────────────────────
@@ -61,6 +63,8 @@ export const orders = pgTable("orders", {
   customerNote: text("customer_note"),
   status: orderStatusEnum("status").notNull().default("pending"),
   paymentMethod: paymentMethodEnum("payment_method").notNull(),
+  deliveryType: deliveryTypeEnum("delivery_type").notNull().default("pickup"),
+  deliveryAddress: text("delivery_address"),
   totalAmount: integer("total_amount").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

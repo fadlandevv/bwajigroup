@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Copy, CheckCircle2 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
-import { createOrderSchema, type CreateOrderSchema } from "@/lib/validations/order";
+import { orderFormSchema, type OrderFormData } from "@/lib/validations/order";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/layout/navbar";
@@ -30,14 +30,14 @@ export default function CheckoutPage() {
     handleSubmit,
     formState: { errors },
     watch,
-  } = useForm<CreateOrderSchema>({
-    resolver: zodResolver(createOrderSchema),
-    defaultValues: { brandSlug: brandSlug ?? undefined, paymentMethod: "qris" },
+  } = useForm<OrderFormData>({
+    resolver: zodResolver(orderFormSchema),
+    defaultValues: { paymentMethod: "qris", deliveryType: "pickup" },
   });
 
   const paymentMethod = watch("paymentMethod");
 
-  const onSubmit = async (data: CreateOrderSchema) => {
+  const onSubmit = async (data: OrderFormData) => {
     setIsSubmitting(true);
     try {
       const payload = {

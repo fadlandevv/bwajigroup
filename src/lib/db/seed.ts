@@ -6,8 +6,9 @@ import postgres from "postgres";
 import bcrypt from "bcryptjs";
 import * as schema from "./schema";
 
-const client = postgres(process.env.DATABASE_URL!, {
+const client = postgres(process.env.DIRECT_URL ?? process.env.DATABASE_URL!, {
   prepare: false,
+  ssl: "require",
 });
 const db = drizzle(client, { schema });
 

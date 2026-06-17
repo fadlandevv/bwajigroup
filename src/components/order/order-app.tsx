@@ -15,10 +15,10 @@ import { BRANDS } from "@/types/brand";
 import type { Brand, BrandSlug } from "@/types/brand";
 import type { MenuItem } from "@/types/menu";
 import { formatRupiah } from "@/lib/utils";
-import { createOrderSchema } from "@/lib/validations/order";
+import { orderFormSchema } from "@/lib/validations/order";
 
 type View = "beranda" | "menu" | "history" | "keranjang" | "checkout" | "payment" | "success";
-type CheckoutFormData = z.input<typeof createOrderSchema>;
+type CheckoutFormData = z.infer<typeof orderFormSchema>;
 
 type OrderHistory = {
   id: string;
@@ -146,7 +146,7 @@ function FeaturedCard({ item, brand, qty, onAdd, onDec }: CardProps) {
 
 export function OrderApp() {
   const [view, setView] = useState<View>("beranda");
-  const [selectedBrand, setSelectedBrand] = useState<BrandSlug>("dapur-bwaji");
+  const [selectedBrand, setSelectedBrand] = useState<BrandSlug | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [loading, setLoading] = useState(true);
@@ -160,7 +160,7 @@ export function OrderApp() {
 
   const { items, addItem, updateQuantity, getTotalItems, getTotalPrice, clearCart } = useCartStore();
 
-  const brand = BRANDS.find((b) => b.slug === selectedBrand)!;
+  const brand = BRANDS.find((b) => b.slug === selectedBrand) ?? BRANDS[0];
   const categories = ["Semua", ...Array.from(new Set(menuItems.map((m) => m.category)))];
   const availableItems = menuItems.filter((m) => m.isAvailable);
   const featuredItems = availableItems.filter((m) => m.isFeatured);
@@ -172,15 +172,18 @@ export function OrderApp() {
     register,
     handleSubmit,
     watch,
+    setError,
     formState: { errors },
   } = useForm<CheckoutFormData>({
-    resolver: zodResolver(createOrderSchema),
-    defaultValues: { brandSlug: selectedBrand, paymentMethod: "qris" },
+    resolver: zodResolver(orderFormSchema),
+    defaultValues: { paymentMethod: "qris", deliveryType: "pickup" },
   });
 
   const paymentMethod = watch("paymentMethod");
+  const deliveryType = watch("deliveryType");
 
   useEffect(() => {
+    if (!selectedBrand) return;
     const load = async () => {
       setLoading(true);
       try {
@@ -196,19 +199,110 @@ export function OrderApp() {
 
   const getQty = (id: string) => items.find((i) => i.menuItem.id === id)?.quantity ?? 0;
 
+  // ── Brand picker screen (shown first, before main app) ──
+  if (!selectedBrand) {
+    return (
+      <div className="flex h-full flex-col bg-[#FFFCF8]">
+        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
+          <Link
+            href="/"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-[#FAF3EB]"
+          >
+            <ArrowLeft size={19} />
+          </Link>
+          <span className="text-sm font-medium text-[#7A6955]">Kembali ke Home</span>
+        </div>
+
+        <div className="px-5 pb-8 pt-4">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#C0272D]">
+            Pemesanan
+          </span>
+          <h1
+            className="mt-2 text-3xl font-black leading-tight text-[#1A0F0A]"
+            style={{ fontFamily: "var(--font-archivo)" }}
+          >
+            Mau pesan<br />dari mana?
+          </h1>
+          <p className="mt-2 text-sm text-[#7A6955]">
+            Pilih brand favoritmu untuk mulai memesan
+          </p>
+        </div>
+
+        <div className="flex-1 space-y-4 px-5">
+          {BRANDS.map((b) => (
+            <button
+              key={b.slug}
+              onClick={() => setSelectedBrand(b.slug)}
+              className="relative w-full overflow-hidden rounded-3xl p-6 text-left text-white transition-all hover:scale-[1.01] active:scale-[0.98]"
+              style={{ backgroundColor: b.primaryColor }}
+            >
+              <div
+                className="absolute inset-0 opacity-30"
+                style={{
+                  backgroundImage: `radial-gradient(circle at 90% 10%, ${b.accentColor}, transparent 50%)`,
+                }}
+              />
+              <div className="relative">
+                <span className="text-xs font-semibold uppercase tracking-widest opacity-70">
+                  Bwaji Group
+                </span>
+                <h2
+                  className="mt-1.5 text-2xl font-black"
+                  style={{ fontFamily: "var(--font-archivo)" }}
+                >
+                  {b.name}
+                </h2>
+                <p className="mt-1 text-sm opacity-80">{b.tagline}</p>
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-1.5 text-sm font-semibold">
+                  Pesan sekarang →
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   async function onCheckoutSubmit(data: CheckoutFormData) {
+    // Manual delivery address check (skips ZodEffects complexity)
+    if (data.deliveryType === "delivery" && (!data.deliveryAddress || data.deliveryAddress.trim().length < 10)) {
+      setError("deliveryAddress", { message: "Alamat pengiriman wajib diisi (minimal 10 karakter)" });
+      return;
+    }
+
+    // Guard: items from public brand pages use dummy IDs (non-UUID). Detect and clear.
+    const hasDummyItems = items.some((i) => !UUID_RE.test(i.menuItem.id));
+    if (hasDummyItems) {
+      clearCart();
+      alert("Keranjang berisi item lama yang tidak valid. Keranjang sudah dikosongkan — silakan tambah menu lagi dari tab Menu.");
+      setView("menu");
+      return;
+    }
+
     setSubmitting(true);
     try {
+      const payload = {
+        ...data,
+        brandSlug: selectedBrand,
+        items: items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity })),
+      };
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          brandSlug: selectedBrand,
-          items: items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity })),
-        }),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error();
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        console.error("API Error", res.status, JSON.stringify(err));
+        alert(`Gagal (${res.status}): ${err?.error ? JSON.stringify(err.error) : "Server error, coba lagi."}`);
+        return;
+      }
+
       const amount = getTotalPrice();
       clearCart();
       if (data.paymentMethod === "qris") {
@@ -217,8 +311,9 @@ export function OrderApp() {
       } else {
         setView("success");
       }
-    } catch {
-      alert("Terjadi kesalahan, coba lagi.");
+    } catch (err) {
+      console.error("Network/submit error:", err);
+      alert("Tidak bisa terhubung ke server. Periksa koneksi internet.");
     } finally {
       setSubmitting(false);
     }
@@ -277,15 +372,11 @@ export function OrderApp() {
               )}
             </button>
           </div>
-          <div className="mb-3 flex rounded-xl bg-gray-100 p-1">
-            {BRANDS.map((b) => (
-              <button key={b.slug} onClick={() => setSelectedBrand(b.slug)}
-                className="flex-1 rounded-lg py-2 text-xs font-semibold transition-all duration-200"
-                style={selectedBrand === b.slug ? { backgroundColor: b.primaryColor, color: "#fff" } : { color: "#9ca3af" }}
-              >
-                {b.name}
-              </button>
-            ))}
+          <div
+            className="mb-3 rounded-xl px-3 py-2 text-center text-xs font-semibold"
+            style={{ backgroundColor: `${brand.primaryColor}15`, color: brand.primaryColor }}
+          >
+            {brand.name}
           </div>
         </div>
       )}
@@ -543,7 +634,7 @@ export function OrderApp() {
                 <p className="text-xs text-gray-400">Total: {formatRupiah(totalPrice)}</p>
               </div>
             </div>
-            <form onSubmit={handleSubmit(onCheckoutSubmit)} className="flex flex-1 flex-col overflow-y-auto">
+            <form onSubmit={handleSubmit(onCheckoutSubmit, (e) => console.error("Form validation errors:", e))} className="flex flex-1 flex-col overflow-y-auto">
               <div className="flex-1 space-y-4 px-4 py-5">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-gray-600">Nama Lengkap</label>
@@ -572,6 +663,45 @@ export function OrderApp() {
                     {...register("customerNote")}
                   />
                 </div>
+                {/* Jenis Pengiriman */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-gray-600">Jenis Pengiriman</label>
+                  {([
+                    { value: "pickup", label: "Ambil di Tempat", desc: "Ambil langsung di lokasi kami" },
+                    { value: "delivery", label: "Diantar (Delivery)", desc: "Masukkan alamat, kami atur kurirnya" },
+                  ] as const).map(({ value, label, desc }) => (
+                    <label
+                      key={value}
+                      className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3"
+                      style={deliveryType === value ? { borderColor: brand.primaryColor, backgroundColor: `${brand.primaryColor}08` } : {}}
+                    >
+                      <input type="radio" value={value} {...register("deliveryType")} className="accent-orange-500" />
+                      <div>
+                        <p className="text-sm font-medium text-[#1A0F0A]">{label}</p>
+                        <p className="text-xs text-gray-400">{desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Alamat (hanya jika delivery) */}
+                {deliveryType === "delivery" && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-gray-600">Alamat Pengiriman</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Jl. Contoh No. 1, RT/RW, Kelurahan, Kecamatan, Kota..."
+                      className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:outline-none focus:ring-2"
+                      style={{ focusBorderColor: brand.primaryColor } as React.CSSProperties}
+                      {...register("deliveryAddress")}
+                    />
+                    {errors.deliveryAddress && (
+                      <p className="text-xs text-red-500">{errors.deliveryAddress.message}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Metode Pembayaran */}
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-semibold text-gray-600">Metode Pembayaran</label>
                   {(["qris", "transfer", "cash"] as const).map((method) => (

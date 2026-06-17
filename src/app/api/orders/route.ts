@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orders, orderItems, menuItems } from "@/lib/db/schema";
 import { createOrderSchema } from "@/lib/validations/order";
-import { inArray } from "drizzle-orm";
+import { eq, inArray, desc } from "drizzle-orm";
 
-export async function GET() {
-  const allOrders = await db.select().from(orders);
+export async function GET(req: NextRequest) {
+  const phone = req.nextUrl.searchParams.get("phone");
+  if (phone) {
+    const customerOrders = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.customerPhone, phone))
+      .orderBy(desc(orders.createdAt));
+    return NextResponse.json(customerOrders);
+  }
+  const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
   return NextResponse.json(allOrders);
 }
 
@@ -16,8 +25,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { brandSlug, customerName, customerPhone, customerNote, paymentMethod, items } =
-    parsed.data;
+  const {
+    brandSlug, customerName, customerPhone, customerNote,
+    paymentMethod, deliveryType, deliveryAddress, items,
+  } = parsed.data;
 
   const menuItemIds = items.map((i) => i.menuItemId);
   const menuData = await db
@@ -44,7 +55,10 @@ export async function POST(req: NextRequest) {
 
   const [order] = await db
     .insert(orders)
-    .values({ brandSlug, customerName, customerPhone, customerNote, paymentMethod, totalAmount })
+    .values({
+      brandSlug, customerName, customerPhone, customerNote,
+      paymentMethod, deliveryType, deliveryAddress: deliveryAddress ?? null, totalAmount,
+    })
     .returning();
 
   await db.insert(orderItems).values(
