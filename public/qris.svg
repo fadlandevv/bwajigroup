@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" fill="none">
+  <!-- Background -->
+  <rect width="200" height="220" fill="white"/>
+
+  <!-- QRIS Header -->
+  <rect x="0" y="0" width="200" height="28" fill="#E41E26"/>
+  <text x="100" y="19" font-family="Arial" font-size="13" font-weight="bold" fill="white" text-anchor="middle">QRIS</text>
+
+  <!-- QR Code Pattern (dummy) -->
+  <!-- Top-left finder pattern -->
+  <rect x="16" y="36" width="42" height="42" rx="3" fill="#1D1A40"/>
+  <rect x="21" y="41" width="32" height="32" rx="2" fill="white"/>
+  <rect x="26" y="46" width="22" height="22" rx="1" fill="#1D1A40"/>
+  <rect x="31" y="51" width="12" height="12" fill="white"/>
+
+  <!-- Top-right finder pattern -->
+  <rect x="142" y="36" width="42" height="42" rx="3" fill="#1D1A40"/>
+  <rect x="147" y="41" width="32" height="32" rx="2" fill="white"/>
+  <rect x="152" y="46" width="22" height="22" rx="1" fill="#1D1A40"/>
+  <rect x="157" y="51" width="12" height="12" fill="white"/>
+
+  <!-- Bottom-left finder pattern -->
+  <rect x="16" y="122" width="42" height="42" rx="3" fill="#1D1A40"/>
+  <rect x="21" y="127" width="32" height="32" rx="2" fill="white"/>
+  <rect x="26" y="132" width="22" height="22" rx="1" fill="#1D1A40"/>
+  <rect x="31" y="137" width="12" height="12" fill="white"/>
+
+  <!-- Random data modules (dummy pattern) -->
+  <rect x="68" y="36" width="7" height="7" fill="#1D1A40"/>
+  <rect x="80" y="36" width="7" height="7" fill="#1D1A40"/>
+  <rect x="92" y="36" width="7" height="7" fill="#1D1A40"/>
+  <rect x="116" y="36" width="7" height="7" fill="#1D1A40"/>
+  <rect x="128" y="36" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="68" y="48" width="7" height="7" fill="#1D1A40"/>
+  <rect x="92" y="48" width="7" height="7" fill="#1D1A40"/>
+  <rect x="104" y="48" width="7" height="7" fill="#1D1A40"/>
+  <rect x="128" y="48" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="80" y="60" width="7" height="7" fill="#1D1A40"/>
+  <rect x="104" y="60" width="7" height="7" fill="#1D1A40"/>
+  <rect x="116" y="60" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="68" y="72" width="7" height="7" fill="#1D1A40"/>
+  <rect x="80" y="72" width="7" height="7" fill="#1D1A40"/>
+  <rect x="104" y="72" width="7" height="7" fill="#1D1A40"/>
+  <rect x="128" y="72" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="68" y="84" width="7" height="7" fill="#1D1A40"/>
+  <rect x="92" y="84" width="7" height="7" fill="#1D1A40"/>
+  <rect x="116" y="84" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="68" y="96" width="7" height="7" fill="#1D1A40"/>
+  <rect x="80" y="96" width="7" height="7" fill="#1D1A40"/>
+  <rect x="104" y="96" width="7" height="7" fill="#1D1A40"/>
+  <rect x="128" y="96" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="68" y="108" width="7" height="7" fill="#1D1A40"/>
+  <rect x="92" y="108" width="7" height="7" fill="#1D1A40"/>
+  <rect x="80" y="108" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="68" y="122" width="7" height="7" fill="#1D1A40"/>
+  <rect x="104" y="122" width="7" height="7" fill="#1D1A40"/>
+  <rect x="116" y="122" width="7" height="7" fill="#1D1A40"/>
+  <rect x="128" y="122" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="80" y="134" width="7" height="7" fill="#1D1A40"/>
+  <rect x="92" y="134" width="7" height="7" fill="#1D1A40"/>
+  <rect x="116" y="134" width="7" height="7" fill="#1D1A40"/>
+  <rect x="128" y="134" width="7" height="7" fill="#1D1A40"/>
+
+  <rect x="68" y="146" width="7" height="7" fill="#1D1A40"/>
+  <rect x="104" y="146" width="7" height="7" fill="#1D1A40"/>
+  <rect x="128" y="146" width="7" height="7" fill="#1D1A40"/>
+
+  <!-- DUMMY watermark -->
+  <text x="100" y="176" font-family="Arial" font-size="9" fill="#9CA3AF" text-anchor="middle">DUMMY • GANTI DENGAN QRIS ASLI</text>
+
+  <!-- Brand name -->
+  <text x="100" y="194" font-family="Arial" font-size="11" font-weight="bold" fill="#1D1A40" text-anchor="middle">Bwaji Group</text>
+  <text x="100" y="210" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle">Scan untuk membayar</text>
+</svg>
