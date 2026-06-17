@@ -1,19 +1,40 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed,
+  Copy, CheckCircle2, CheckCircle, Clock, Search,
+} from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { BRANDS } from "@/types/brand";
 import type { Brand, BrandSlug } from "@/types/brand";
 import type { MenuItem } from "@/types/menu";
 import { formatRupiah } from "@/lib/utils";
+import { createOrderSchema } from "@/lib/validations/order";
 
-type Tab = "beranda" | "menu" | "keranjang";
+type View = "beranda" | "menu" | "history" | "keranjang" | "checkout" | "payment" | "success";
+type CheckoutFormData = z.input<typeof createOrderSchema>;
 
-const TABS: Array<{ tab: Tab; Icon: typeof Home; label: string }> = [
+type OrderHistory = {
+  id: string;
+  brandSlug: string;
+  customerName: string;
+  customerPhone: string;
+  status: string;
+  paymentMethod: string;
+  totalAmount: number;
+  createdAt: string;
+};
+
+const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "keranjang">; Icon: typeof Home; label: string }> = [
   { tab: "beranda", Icon: Home, label: "Beranda" },
   { tab: "menu", Icon: UtensilsCrossed, label: "Menu" },
+  { tab: "history", Icon: Clock, label: "History" },
   { tab: "keranjang", Icon: ShoppingBag, label: "Keranjang" },
 ];
 
@@ -93,9 +114,7 @@ function FeaturedCard({ item, brand, qty, onAdd, onDec }: CardProps) {
         </span>
       </div>
       <div className="p-3">
-        <p className="line-clamp-2 text-xs font-semibold leading-tight text-[#1A0F0A]">
-          {item.name}
-        </p>
+        <p className="line-clamp-2 text-xs font-semibold leading-tight text-[#1A0F0A]">{item.name}</p>
         <p className="mt-1 text-xs font-bold" style={{ color: brand.primaryColor }}>
           {formatRupiah(item.price)}
         </p>
@@ -110,19 +129,11 @@ function FeaturedCard({ item, brand, qty, onAdd, onDec }: CardProps) {
             </button>
           ) : (
             <div className="flex items-center justify-between">
-              <button
-                onClick={onDec}
-                className="flex h-6 w-6 items-center justify-center rounded-full border"
-                style={{ borderColor: brand.primaryColor }}
-              >
+              <button onClick={onDec} className="flex h-6 w-6 items-center justify-center rounded-full border" style={{ borderColor: brand.primaryColor }}>
                 <Minus size={10} style={{ color: brand.primaryColor }} />
               </button>
               <span className="text-xs font-bold text-[#1A0F0A]">{qty}</span>
-              <button
-                onClick={onAdd}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-white"
-                style={{ backgroundColor: brand.primaryColor }}
-              >
+              <button onClick={onAdd} className="flex h-6 w-6 items-center justify-center rounded-full text-white" style={{ backgroundColor: brand.primaryColor }}>
                 <Plus size={10} />
               </button>
             </div>
@@ -134,26 +145,40 @@ function FeaturedCard({ item, brand, qty, onAdd, onDec }: CardProps) {
 }
 
 export function OrderApp() {
-  const [activeTab, setActiveTab] = useState<Tab>("beranda");
+  const [view, setView] = useState<View>("beranda");
   const [selectedBrand, setSelectedBrand] = useState<BrandSlug>("dapur-bwaji");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [historyPhone, setHistoryPhone] = useState("");
+  const [historyOrders, setHistoryOrders] = useState<OrderHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearched, setHistorySearched] = useState(false);
 
-  const { items, addItem, updateQuantity, getTotalItems, getTotalPrice, clearCart } =
-    useCartStore();
+  const { items, addItem, updateQuantity, getTotalItems, getTotalPrice, clearCart } = useCartStore();
 
   const brand = BRANDS.find((b) => b.slug === selectedBrand)!;
   const categories = ["Semua", ...Array.from(new Set(menuItems.map((m) => m.category)))];
   const availableItems = menuItems.filter((m) => m.isAvailable);
   const featuredItems = availableItems.filter((m) => m.isFeatured);
-  const filteredItems =
-    activeCategory === "Semua"
-      ? availableItems
-      : availableItems.filter((m) => m.category === activeCategory);
-
+  const filteredItems = activeCategory === "Semua" ? availableItems : availableItems.filter((m) => m.category === activeCategory);
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<CheckoutFormData>({
+    resolver: zodResolver(createOrderSchema),
+    defaultValues: { brandSlug: selectedBrand, paymentMethod: "qris" },
+  });
+
+  const paymentMethod = watch("paymentMethod");
 
   useEffect(() => {
     const load = async () => {
@@ -169,181 +194,156 @@ export function OrderApp() {
     load();
   }, [selectedBrand]);
 
-  const getQty = (id: string) =>
-    items.find((i) => i.menuItem.id === id)?.quantity ?? 0;
+  const getQty = (id: string) => items.find((i) => i.menuItem.id === id)?.quantity ?? 0;
+
+  async function onCheckoutSubmit(data: CheckoutFormData) {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          brandSlug: selectedBrand,
+          items: items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity })),
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const amount = getTotalPrice();
+      clearCart();
+      if (data.paymentMethod === "qris") {
+        setTotalAmount(amount);
+        setView("payment");
+      } else {
+        setView("success");
+      }
+    } catch {
+      alert("Terjadi kesalahan, coba lagi.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function copyAmount() {
+    navigator.clipboard.writeText(String(totalAmount));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function searchHistory() {
+    if (!historyPhone.trim()) return;
+    setHistoryLoading(true);
+    setHistorySearched(false);
+    try {
+      const res = await fetch(`/api/orders?phone=${encodeURIComponent(historyPhone.trim())}`);
+      setHistoryOrders(await res.json());
+    } finally {
+      setHistoryLoading(false);
+      setHistorySearched(true);
+    }
+  }
+
+  const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+    pending:   { label: "Menunggu",   color: "#92400e", bg: "#fef3c7" },
+    confirmed: { label: "Dikonfirmasi", color: "#1e40af", bg: "#dbeafe" },
+    preparing: { label: "Dimasak",    color: "#c2410c", bg: "#ffedd5" },
+    ready:     { label: "Siap Ambil", color: "#065f46", bg: "#d1fae5" },
+    delivered: { label: "Selesai",    color: "#166534", bg: "#bbf7d0" },
+    cancelled: { label: "Dibatalkan", color: "#991b1b", bg: "#fee2e2" },
+  };
+
+  const isFullscreen = view === "checkout" || view === "payment" || view === "success";
 
   return (
     <div className="flex h-full flex-col bg-gray-50">
 
       {/* ── HEADER ── */}
-      <div className="z-10 bg-white px-5 pb-0 pt-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100"
-          >
-            <ArrowLeft size={19} />
-          </Link>
-          <span className="text-sm font-bold text-[#1A0F0A]">Bwaji Group</span>
-          <button
-            onClick={() => setActiveTab("keranjang")}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100"
-          >
-            <ShoppingBag size={19} />
-            {totalItems > 0 && (
-              <span
-                className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                style={{ backgroundColor: brand.primaryColor }}
-              >
-                {totalItems}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Brand toggle */}
-        <div className="mb-3 flex rounded-xl bg-gray-100 p-1">
-          {BRANDS.map((b) => (
+      {!isFullscreen && (
+        <div className="z-10 bg-white px-5 pb-0 pt-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100">
+              <ArrowLeft size={19} />
+            </Link>
+            <span className="text-sm font-bold text-[#1A0F0A]">Bwaji Group</span>
             <button
-              key={b.slug}
-              onClick={() => setSelectedBrand(b.slug)}
-              className="flex-1 rounded-lg py-2 text-xs font-semibold transition-all duration-200"
-              style={
-                selectedBrand === b.slug
-                  ? { backgroundColor: b.primaryColor, color: "#fff" }
-                  : { color: "#9ca3af" }
-              }
+              onClick={() => setView("keranjang")}
+              className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100"
             >
-              {b.name}
+              <ShoppingBag size={19} />
+              {totalItems > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
+                  {totalItems}
+                </span>
+              )}
             </button>
-          ))}
+          </div>
+          <div className="mb-3 flex rounded-xl bg-gray-100 p-1">
+            {BRANDS.map((b) => (
+              <button key={b.slug} onClick={() => setSelectedBrand(b.slug)}
+                className="flex-1 rounded-lg py-2 text-xs font-semibold transition-all duration-200"
+                style={selectedBrand === b.slug ? { backgroundColor: b.primaryColor, color: "#fff" } : { color: "#9ca3af" }}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── CONTENT ── */}
       <div className="flex-1 overflow-y-auto">
 
         {/* ── BERANDA ── */}
-        {activeTab === "beranda" && (
+        {view === "beranda" && (
           <div className="pb-6">
-
-            {/* Promo banner */}
-            <div
-              className="relative mx-4 mt-4 overflow-hidden rounded-2xl p-5"
-              style={{ backgroundColor: brand.primaryColor }}
-            >
-              <div
-                className="absolute inset-0 opacity-30"
-                style={{
-                  backgroundImage: `radial-gradient(circle at 85% 15%, ${brand.accentColor}, transparent 55%)`,
-                }}
-              />
+            <div className="relative mx-4 mt-4 overflow-hidden rounded-2xl p-5" style={{ backgroundColor: brand.primaryColor }}>
+              <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `radial-gradient(circle at 85% 15%, ${brand.accentColor}, transparent 55%)` }} />
               <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-widest text-white/70">
-                  Spesial Hari Ini
-                </p>
-                <h2
-                  className="mt-1 text-2xl font-black text-white"
-                  style={{ fontFamily: "var(--font-archivo)" }}
-                >
+                <p className="text-xs font-semibold uppercase tracking-widest text-white/70">Spesial Hari Ini</p>
+                <h2 className="mt-1 text-2xl font-black text-white" style={{ fontFamily: "var(--font-archivo)" }}>
                   Fresh & Lezat<br />Setiap Hari! 🔥
                 </h2>
-                <p className="mt-1.5 text-xs text-white/75">
-                  Bahan segar, dimasak langsung untuk kamu
-                </p>
-                <button
-                  onClick={() => setActiveTab("menu")}
-                  className="mt-4 rounded-full bg-white px-4 py-1.5 text-xs font-bold"
-                  style={{ color: brand.primaryColor }}
-                >
+                <p className="mt-1.5 text-xs text-white/75">Bahan segar, dimasak langsung untuk kamu</p>
+                <button onClick={() => setView("menu")} className="mt-4 rounded-full bg-white px-4 py-1.5 text-xs font-bold" style={{ color: brand.primaryColor }}>
                   Lihat Menu →
                 </button>
               </div>
             </div>
-
-            {/* Quick actions */}
             <div className="mx-4 mt-4 grid grid-cols-4 gap-3">
-              {[
-                { icon: "🍽️", label: "Menu", onClick: () => setActiveTab("menu") },
-                { icon: "⭐", label: "Favorit", onClick: () => setActiveTab("menu") },
-                { icon: "🔥", label: "Promo", onClick: () => setActiveTab("menu") },
-                { icon: "📦", label: "Paket", onClick: () => setActiveTab("menu") },
-              ].map(({ icon, label, onClick }) => (
-                <button
-                  key={label}
-                  onClick={onClick}
-                  className="flex flex-col items-center gap-1.5"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
-                    {icon}
-                  </div>
+              {[{ icon: "🍽️", label: "Menu" }, { icon: "⭐", label: "Favorit" }, { icon: "🔥", label: "Promo" }, { icon: "📦", label: "Paket" }].map(({ icon, label }) => (
+                <button key={label} onClick={() => setView("menu")} className="flex flex-col items-center gap-1.5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">{icon}</div>
                   <span className="text-[11px] font-medium text-gray-600">{label}</span>
                 </button>
               ))}
             </div>
-
-            {/* Featured items */}
             {featuredItems.length > 0 && (
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between px-4">
                   <h3 className="font-bold text-[#1A0F0A]">Menu Unggulan ⭐</h3>
-                  <button
-                    onClick={() => setActiveTab("menu")}
-                    className="text-xs font-medium"
-                    style={{ color: brand.primaryColor }}
-                  >
-                    Lihat semua
-                  </button>
+                  <button onClick={() => setView("menu")} className="text-xs font-medium" style={{ color: brand.primaryColor }}>Lihat semua</button>
                 </div>
-                <div
-                  className="flex gap-3 overflow-x-auto px-4 pb-2"
-                  style={{ scrollbarWidth: "none" }}
-                >
+                <div className="flex gap-3 overflow-x-auto px-4 pb-2" style={{ scrollbarWidth: "none" }}>
                   {featuredItems.map((item) => (
-                    <FeaturedCard
-                      key={item.id}
-                      item={item}
-                      brand={brand}
-                      qty={getQty(item.id)}
-                      onAdd={() => addItem(item)}
-                      onDec={() => updateQuantity(item.id, getQty(item.id) - 1)}
-                    />
+                    <FeaturedCard key={item.id} item={item} brand={brand} qty={getQty(item.id)} onAdd={() => addItem(item)} onDec={() => updateQuantity(item.id, getQty(item.id) - 1)} />
                   ))}
                 </div>
               </div>
             )}
-
-            {/* Menu preview */}
             <div className="mx-4 mt-5">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-bold text-[#1A0F0A]">Semua Menu</h3>
-                <button
-                  onClick={() => setActiveTab("menu")}
-                  className="text-xs font-medium"
-                  style={{ color: brand.primaryColor }}
-                >
-                  Lihat semua
-                </button>
+                <button onClick={() => setView("menu")} className="text-xs font-medium" style={{ color: brand.primaryColor }}>Lihat semua</button>
               </div>
               {loading ? (
                 <div className="flex justify-center py-10">
-                  <div
-                    className="h-7 w-7 animate-spin rounded-full border-2 border-gray-200"
-                    style={{ borderTopColor: brand.primaryColor }}
-                  />
+                  <div className="h-7 w-7 animate-spin rounded-full border-2 border-gray-200" style={{ borderTopColor: brand.primaryColor }} />
                 </div>
               ) : (
                 <>
                   <div className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white px-4 shadow-sm">
                     {availableItems.slice(0, 5).map((item) => (
-                      <MenuCard
-                        key={item.id}
-                        item={item}
-                        brand={brand}
-                        qty={getQty(item.id)}
-                        onAdd={() => addItem(item)}
-                        onDec={() => updateQuantity(item.id, getQty(item.id) - 1)}
-                      />
+                      <MenuCard key={item.id} item={item} brand={brand} qty={getQty(item.id)} onAdd={() => addItem(item)} onDec={() => updateQuantity(item.id, getQty(item.id) - 1)} />
                     ))}
                     {availableItems.length === 0 && (
                       <div className="flex flex-col items-center gap-2 py-12">
@@ -353,11 +353,7 @@ export function OrderApp() {
                     )}
                   </div>
                   {availableItems.length > 5 && (
-                    <button
-                      onClick={() => setActiveTab("menu")}
-                      className="mt-3 w-full rounded-xl border py-3 text-sm font-semibold"
-                      style={{ borderColor: brand.primaryColor, color: brand.primaryColor }}
-                    >
+                    <button onClick={() => setView("menu")} className="mt-3 w-full rounded-xl border py-3 text-sm font-semibold" style={{ borderColor: brand.primaryColor, color: brand.primaryColor }}>
                       + {availableItems.length - 5} menu lainnya
                     </button>
                   )}
@@ -368,36 +364,23 @@ export function OrderApp() {
         )}
 
         {/* ── MENU ── */}
-        {activeTab === "menu" && (
+        {view === "menu" && (
           <div>
             <div className="sticky top-0 z-10 border-b border-gray-100 bg-white">
-              <div
-                className="flex gap-2 overflow-x-auto px-4 py-3"
-                style={{ scrollbarWidth: "none" }}
-              >
+              <div className="flex gap-2 overflow-x-auto px-4 py-3" style={{ scrollbarWidth: "none" }}>
                 {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
+                  <button key={cat} onClick={() => setActiveCategory(cat)}
                     className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-                    style={
-                      activeCategory === cat
-                        ? { backgroundColor: brand.primaryColor, color: "#fff" }
-                        : { backgroundColor: "#f3f4f6", color: "#6b7280" }
-                    }
+                    style={activeCategory === cat ? { backgroundColor: brand.primaryColor, color: "#fff" } : { backgroundColor: "#f3f4f6", color: "#6b7280" }}
                   >
                     {cat}
                   </button>
                 ))}
               </div>
             </div>
-
             {loading ? (
               <div className="flex justify-center py-16">
-                <div
-                  className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200"
-                  style={{ borderTopColor: brand.primaryColor }}
-                />
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200" style={{ borderTopColor: brand.primaryColor }} />
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-20">
@@ -407,36 +390,92 @@ export function OrderApp() {
             ) : (
               <div className="mx-4 my-4 divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white px-4 shadow-sm">
                 {filteredItems.map((item) => (
-                  <MenuCard
-                    key={item.id}
-                    item={item}
-                    brand={brand}
-                    qty={getQty(item.id)}
-                    onAdd={() => addItem(item)}
-                    onDec={() => updateQuantity(item.id, getQty(item.id) - 1)}
-                  />
+                  <MenuCard key={item.id} item={item} brand={brand} qty={getQty(item.id)} onAdd={() => addItem(item)} onDec={() => updateQuantity(item.id, getQty(item.id) - 1)} />
                 ))}
               </div>
             )}
           </div>
         )}
 
+        {/* ── HISTORY ── */}
+        {view === "history" && (
+          <div className="mx-4 mt-4 pb-6">
+            <h2 className="mb-1 text-lg font-bold text-[#1A0F0A]">Riwayat Pesanan</h2>
+            <p className="mb-4 text-xs text-gray-400">Masukkan nomor HP yang kamu gunakan saat pesan</p>
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                value={historyPhone}
+                onChange={(e) => setHistoryPhone(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && searchHistory()}
+                placeholder="08xxxxxxxxxx"
+                className="h-11 flex-1 rounded-xl border border-gray-200 bg-white px-4 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+              />
+              <button
+                onClick={searchHistory}
+                disabled={historyLoading || !historyPhone.trim()}
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-white disabled:opacity-50"
+                style={{ backgroundColor: brand.primaryColor }}
+              >
+                {historyLoading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  <Search size={17} />
+                )}
+              </button>
+            </div>
+
+            {historySearched && !historyLoading && (
+              <div className="mt-4">
+                {historyOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white py-16 shadow-sm">
+                    <span className="text-3xl">📭</span>
+                    <p className="text-sm font-medium text-gray-400">Tidak ada pesanan ditemukan</p>
+                    <p className="text-xs text-gray-300">Coba nomor HP lain</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-400">{historyOrders.length} pesanan ditemukan</p>
+                    {historyOrders.map((order) => {
+                      const s = STATUS_LABEL[order.status] ?? { label: order.status, color: "#6b7280", bg: "#f3f4f6" };
+                      const brandName = order.brandSlug === "dapur-bwaji" ? "Dapur Bwaji" : "Hoki Dimsum";
+                      const date = new Date(order.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                      });
+                      return (
+                        <div key={order.id} className="rounded-2xl bg-white p-4 shadow-sm">
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-semibold text-gray-400">{brandName}</p>
+                              <p className="text-sm font-bold text-[#1A0F0A]">{order.customerName}</p>
+                            </div>
+                            <span className="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: s.color, backgroundColor: s.bg }}>
+                              {s.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                            <p className="text-xs text-gray-400">{date}</p>
+                            <p className="text-sm font-black" style={{ color: brand.primaryColor }}>{formatRupiah(order.totalAmount)}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── KERANJANG ── */}
-        {activeTab === "keranjang" && (
+        {view === "keranjang" && (
           <div className="mx-4 mt-4 pb-6">
             <h2 className="mb-4 text-lg font-bold text-[#1A0F0A]">Keranjang</h2>
-
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white py-20 shadow-sm">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-3xl">
-                  🛒
-                </div>
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-3xl">🛒</div>
                 <p className="text-sm font-medium text-gray-500">Keranjang masih kosong</p>
-                <button
-                  onClick={() => setActiveTab("menu")}
-                  className="rounded-full px-6 py-2.5 text-sm font-semibold text-white"
-                  style={{ backgroundColor: brand.primaryColor }}
-                >
+                <button onClick={() => setView("menu")} className="rounded-full px-6 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: brand.primaryColor }}>
                   Tambah Menu
                 </button>
               </div>
@@ -448,46 +487,27 @@ export function OrderApp() {
                       <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
                         {menuItem.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={menuItem.imageUrl}
-                            alt={menuItem.name}
-                            className="h-full w-full object-cover"
-                          />
+                          <img src={menuItem.imageUrl} alt={menuItem.name} className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full items-center justify-center text-xl">🍽️</div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[#1A0F0A]">
-                          {menuItem.name}
-                        </p>
-                        <p className="mt-0.5 text-sm font-bold" style={{ color: brand.primaryColor }}>
-                          {formatRupiah(menuItem.price)}
-                        </p>
+                        <p className="truncate text-sm font-semibold text-[#1A0F0A]">{menuItem.name}</p>
+                        <p className="mt-0.5 text-sm font-bold" style={{ color: brand.primaryColor }}>{formatRupiah(menuItem.price)}</p>
                       </div>
                       <div className="flex flex-shrink-0 items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(menuItem.id, quantity - 1)}
-                          className="flex h-7 w-7 items-center justify-center rounded-full border-2"
-                          style={{ borderColor: brand.primaryColor }}
-                        >
+                        <button onClick={() => updateQuantity(menuItem.id, quantity - 1)} className="flex h-7 w-7 items-center justify-center rounded-full border-2" style={{ borderColor: brand.primaryColor }}>
                           <Minus size={11} style={{ color: brand.primaryColor }} />
                         </button>
-                        <span className="w-4 text-center text-sm font-bold text-[#1A0F0A]">
-                          {quantity}
-                        </span>
-                        <button
-                          onClick={() => addItem(menuItem)}
-                          className="flex h-7 w-7 items-center justify-center rounded-full text-white"
-                          style={{ backgroundColor: brand.primaryColor }}
-                        >
+                        <span className="w-4 text-center text-sm font-bold text-[#1A0F0A]">{quantity}</span>
+                        <button onClick={() => addItem(menuItem)} className="flex h-7 w-7 items-center justify-center rounded-full text-white" style={{ backgroundColor: brand.primaryColor }}>
                           <Plus size={11} />
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
-
                 <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm text-gray-500">Subtotal ({totalItems} item)</span>
@@ -495,76 +515,178 @@ export function OrderApp() {
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                     <span className="font-bold text-[#1A0F0A]">Total</span>
-                    <span className="text-lg font-black" style={{ color: brand.primaryColor }}>
-                      {formatRupiah(totalPrice)}
-                    </span>
+                    <span className="text-lg font-black" style={{ color: brand.primaryColor }}>{formatRupiah(totalPrice)}</span>
                   </div>
                 </div>
-
                 <div className="flex gap-3">
-                  <button
-                    onClick={clearCart}
-                    className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50"
-                  >
+                  <button onClick={clearCart} className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-50">
                     Kosongkan
                   </button>
-                  <Link href="/checkout" className="flex-1">
-                    <button
-                      className="w-full rounded-xl py-3 text-sm font-bold text-white"
-                      style={{ backgroundColor: brand.primaryColor }}
-                    >
-                      Checkout • {formatRupiah(totalPrice)}
-                    </button>
-                  </Link>
+                  <button onClick={() => setView("checkout")} className="flex-1 rounded-xl py-3 text-sm font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
+                    Checkout • {formatRupiah(totalPrice)}
+                  </button>
                 </div>
               </>
             )}
           </div>
         )}
+
+        {/* ── CHECKOUT ── */}
+        {view === "checkout" && (
+          <div className="flex h-full flex-col bg-white">
+            <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-4">
+              <button onClick={() => setView("keranjang")} className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100">
+                <ArrowLeft size={18} />
+              </button>
+              <div>
+                <p className="text-sm font-bold text-[#1A0F0A]">Data Pemesan</p>
+                <p className="text-xs text-gray-400">Total: {formatRupiah(totalPrice)}</p>
+              </div>
+            </div>
+            <form onSubmit={handleSubmit(onCheckoutSubmit)} className="flex flex-1 flex-col overflow-y-auto">
+              <div className="flex-1 space-y-4 px-4 py-5">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-600">Nama Lengkap</label>
+                  <input
+                    placeholder="John Doe"
+                    className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+                    {...register("customerName")}
+                  />
+                  {errors.customerName && <p className="text-xs text-red-500">{errors.customerName.message}</p>}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-600">Nomor HP</label>
+                  <input
+                    placeholder="08xxxxxxxxxx"
+                    className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+                    {...register("customerPhone")}
+                  />
+                  {errors.customerPhone && <p className="text-xs text-red-500">{errors.customerPhone.message}</p>}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-600">Catatan (opsional)</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Tidak pedas, tidak pakai bawang..."
+                    className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+                    {...register("customerNote")}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-gray-600">Metode Pembayaran</label>
+                  {(["qris", "transfer", "cash"] as const).map((method) => (
+                    <label key={method} className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                      <input type="radio" value={method} {...register("paymentMethod")} className="accent-orange-500" />
+                      <div>
+                        <p className="text-sm font-medium text-[#1A0F0A]">
+                          {method === "qris" ? "QRIS" : method === "transfer" ? "Transfer Bank" : "Bayar di Tempat"}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {method === "qris" ? "Scan QR, bayar sesuai nominal" : method === "transfer" ? "Transfer ke rekening kami" : "Bayar langsung saat ambil"}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t border-gray-100 p-4">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full rounded-2xl py-4 text-sm font-bold text-white disabled:opacity-60"
+                  style={{ backgroundColor: brand.primaryColor }}
+                >
+                  {submitting ? "Memproses..." : paymentMethod === "qris" ? "Lanjut ke Pembayaran QRIS →" : "Buat Pesanan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ── PAYMENT (QRIS) ── */}
+        {view === "payment" && (
+          <div className="flex h-full flex-col bg-white">
+            <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+                <span className="text-sm">💳</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#1A0F0A]">Scan & Bayar</p>
+                <p className="text-xs text-gray-400">Langkah terakhir</p>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col items-center justify-start overflow-y-auto px-6 py-6 gap-5">
+              <div className="w-full rounded-2xl border border-orange-100 bg-orange-50 px-5 py-4 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-orange-400">Transfer tepat sebesar</p>
+                <p className="mt-1 text-4xl font-black" style={{ color: brand.primaryColor }}>{formatRupiah(totalAmount)}</p>
+                <button onClick={copyAmount} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-orange-400 hover:text-orange-600">
+                  {copied ? <CheckCircle2 size={13} /> : <Copy size={13} />}
+                  {copied ? "Disalin!" : "Salin nominal"}
+                </button>
+              </div>
+              <div className="relative h-52 w-52 overflow-hidden rounded-2xl border-2 border-gray-200">
+                <Image src="/qris.svg" alt="QRIS Bwaji Group" fill className="object-contain p-2" />
+              </div>
+              <p className="text-center text-xs text-gray-400">
+                Pastikan nominal yang kamu transfer <span className="font-semibold text-gray-600">sama persis</span> agar pesanan langsung diproses.
+              </p>
+            </div>
+            <div className="border-t border-gray-100 p-4">
+              <button onClick={() => setView("success")} className="w-full rounded-2xl py-4 text-sm font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
+                Saya Sudah Bayar ✓
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── SUCCESS ── */}
+        {view === "success" && (
+          <div className="flex h-full flex-col items-center justify-center bg-white px-6 text-center gap-4">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-50">
+              <CheckCircle size={42} className="text-green-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-[#1A0F0A]" style={{ fontFamily: "var(--font-archivo)" }}>Pesanan Berhasil!</h2>
+              <p className="mt-1.5 text-sm text-gray-500">Pesanan kamu sudah kami terima.<br />Kami akan segera memprosesnya.</p>
+            </div>
+            <button
+              onClick={() => { setView("beranda"); }}
+              className="mt-2 rounded-2xl px-8 py-3.5 text-sm font-bold text-white"
+              style={{ backgroundColor: brand.primaryColor }}
+            >
+              Kembali ke Beranda
+            </button>
+          </div>
+        )}
+
       </div>
 
-      {/* ── BOTTOM NAV ── */}
-      <div className="border-t border-gray-100 bg-white">
-        <div className="flex items-center justify-around px-8 py-3">
-          {TABS.map(({ tab, Icon, label }) => {
-            const isActive = activeTab === tab;
-            const showBadge = tab === "keranjang" && totalItems > 0;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="flex flex-col items-center gap-1"
-              >
-                <div className="relative">
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
-                    style={isActive ? { backgroundColor: `${brand.primaryColor}18` } : {}}
-                  >
-                    <Icon
-                      size={21}
-                      style={{ color: isActive ? brand.primaryColor : "#9ca3af" }}
-                    />
+      {/* ── BOTTOM NAV (hanya untuk beranda/menu/keranjang) ── */}
+      {!isFullscreen && (
+        <div className="border-t border-gray-100 bg-white">
+          <div className="flex items-center justify-around px-8 py-3">
+            {TABS.map(({ tab, Icon, label }) => {
+              const isActive = view === tab;
+              const showBadge = tab === "keranjang" && totalItems > 0;
+              return (
+                <button key={tab} onClick={() => setView(tab)} className="flex flex-col items-center gap-1">
+                  <div className="relative">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors" style={isActive ? { backgroundColor: `${brand.primaryColor}18` } : {}}>
+                      <Icon size={21} style={{ color: isActive ? brand.primaryColor : "#9ca3af" }} />
+                    </div>
+                    {showBadge && (
+                      <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
+                        {totalItems}
+                      </span>
+                    )}
                   </div>
-                  {showBadge && (
-                    <span
-                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                      style={{ backgroundColor: brand.primaryColor }}
-                    >
-                      {totalItems}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className="text-[11px] font-medium"
-                  style={{ color: isActive ? brand.primaryColor : "#9ca3af" }}
-                >
-                  {label}
-                </span>
-              </button>
-            );
-          })}
+                  <span className="text-[11px] font-medium" style={{ color: isActive ? brand.primaryColor : "#9ca3af" }}>{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
