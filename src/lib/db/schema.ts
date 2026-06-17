@@ -65,6 +65,7 @@ export const orders = pgTable("orders", {
   paymentMethod: paymentMethodEnum("payment_method").notNull(),
   deliveryType: deliveryTypeEnum("delivery_type").notNull().default("pickup"),
   deliveryAddress: text("delivery_address"),
+  paymentProof: text("payment_proof"),
   totalAmount: integer("total_amount").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

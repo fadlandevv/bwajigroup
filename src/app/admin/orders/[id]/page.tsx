@@ -111,6 +111,19 @@ export default async function OrderDetailPage({
         </div>
       </div>
 
+      {/* Bukti Pembayaran */}
+      {order.paymentProof && (
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 font-semibold text-gray-900">Bukti Pembayaran</h2>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={order.paymentProof}
+            alt="Bukti pembayaran"
+            className="max-h-96 w-auto rounded-xl border border-gray-100 object-contain"
+          />
+        </div>
+      )}
+
       {/* Update Status */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">
         <h2 className="mb-4 font-semibold text-gray-900">Update Status</h2>
