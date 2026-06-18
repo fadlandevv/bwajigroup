@@ -522,7 +522,7 @@ export function OrderApp() {
       )}
 
       {/* ── CONTENT ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className={view === "chat" ? "flex flex-1 flex-col overflow-hidden min-h-0" : "flex-1 overflow-y-auto"}>
 
         {/* ── BERANDA ── */}
         {view === "beranda" && (
@@ -702,9 +702,9 @@ export function OrderApp() {
 
         {/* ── CHAT ── */}
         {view === "chat" && (
-          <div className="flex flex-col mx-4 mt-4 pb-24">
+          <div className="flex flex-1 flex-col mx-4 mt-4 mb-2 min-h-0">
             {/* Chat card */}
-            <div className="flex flex-col rounded-2xl bg-white shadow-sm overflow-hidden" style={{ minHeight: "60vh" }}>
+            <div className="flex flex-1 flex-col rounded-2xl bg-white shadow-sm overflow-hidden min-h-0">
               {/* Header */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 shrink-0">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold" style={{ backgroundColor: brand.primaryColor }}>
@@ -717,7 +717,7 @@ export function OrderApp() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" style={{ minHeight: "45vh", maxHeight: "55vh" }}>
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 min-h-0">
                 {chatMessages.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
                     <span className="text-3xl">👋</span>
