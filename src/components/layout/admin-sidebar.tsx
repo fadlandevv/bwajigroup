@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   UtensilsCrossed,
   ShoppingBag,
+  ChefHat,
   LogOut,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -15,6 +16,7 @@ const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Menu", href: "/admin/menu", icon: UtensilsCrossed },
   { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
+  { label: "Dapur (KDS)", href: "/admin/kitchen", icon: ChefHat },
 ];
 
 export function AdminSidebar() {
