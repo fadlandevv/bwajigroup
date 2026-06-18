@@ -4,6 +4,7 @@ import { menuItems } from "@/lib/db/schema";
 import { menuItemSchema } from "@/lib/validations/menu";
 import { auth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
+import { dummyMenuDapurBwaji, dummyMenuHokiDimsum } from "@/lib/data/dummy-menu";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -15,10 +16,17 @@ export async function GET(req: NextRequest) {
       ? await query.where(eq(menuItems.brandSlug, brandSlug as "dapur-bwaji" | "hoki-dimsum"))
       : await query;
 
-    return NextResponse.json(result);
+    if (result.length > 0) return NextResponse.json(result);
   } catch {
-    return NextResponse.json([], { status: 200 });
+    // DB tidak tersedia, gunakan dummy
   }
+
+  const fallback =
+    brandSlug === "dapur-bwaji" ? dummyMenuDapurBwaji :
+    brandSlug === "hoki-dimsum" ? dummyMenuHokiDimsum :
+    [...dummyMenuDapurBwaji, ...dummyMenuHokiDimsum];
+
+  return NextResponse.json(fallback);
 }
 
 export async function POST(req: NextRequest) {
