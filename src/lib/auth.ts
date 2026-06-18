@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validations/auth";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       async authorize(credentials) {

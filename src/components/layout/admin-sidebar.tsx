@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   UtensilsCrossed,
   TrendingUp,
+  MessageSquare,
   User,
   LogOut,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const navItems = [
   { label: "Orders", href: "/admin/orders", icon: ShoppingBag, exact: false },
   { label: "Menu", href: "/admin/menu", icon: UtensilsCrossed, exact: false },
   { label: "Finance", href: "/admin/finance", icon: TrendingUp, exact: false },
+  { label: "Chat", href: "/admin/chat", icon: MessageSquare, exact: false },
   { label: "Profile", href: "/admin/profile", icon: User, exact: false },
 ];
 

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes capture-website-cli https://klane.framer.website/ --output=/tmp/klane.png --width=1440 --height=900)",
+      "Bash(npx capture-website-cli *)",
+      "Bash(wait)"
+    ]
+  }
+}

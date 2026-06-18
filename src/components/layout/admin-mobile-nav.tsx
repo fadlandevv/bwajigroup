@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, UtensilsCrossed, TrendingUp, User } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, UtensilsCrossed, MessageSquare, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Home", href: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Orders", href: "/admin/orders", icon: ShoppingBag, exact: false },
   { label: "Menu", href: "/admin/menu", icon: UtensilsCrossed, exact: false },
-  { label: "Finance", href: "/admin/finance", icon: TrendingUp, exact: false },
+  { label: "Chat", href: "/admin/chat", icon: MessageSquare, exact: false },
   { label: "Profile", href: "/admin/profile", icon: User, exact: false },
 ];
 

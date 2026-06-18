@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed,
-  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon,
+  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { BRANDS } from "@/types/brand";
@@ -17,7 +17,7 @@ import type { MenuItem } from "@/types/menu";
 import { formatRupiah } from "@/lib/utils";
 import { orderFormSchema } from "@/lib/validations/order";
 
-type View = "beranda" | "menu" | "history" | "keranjang" | "checkout" | "payment" | "success";
+type View = "beranda" | "menu" | "history" | "chat" | "keranjang" | "checkout" | "payment" | "success";
 type CheckoutFormData = z.infer<typeof orderFormSchema>;
 
 type OrderHistory = {
@@ -31,10 +31,11 @@ type OrderHistory = {
   createdAt: string;
 };
 
-const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "keranjang">; Icon: typeof Home; label: string }> = [
+const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "chat" | "keranjang">; Icon: typeof Home; label: string }> = [
   { tab: "beranda", Icon: Home, label: "Beranda" },
   { tab: "menu", Icon: UtensilsCrossed, label: "Menu" },
   { tab: "history", Icon: Clock, label: "History" },
+  { tab: "chat", Icon: MessageSquare, label: "Chat" },
   { tab: "keranjang", Icon: ShoppingBag, label: "Keranjang" },
 ];
 
@@ -162,6 +163,15 @@ export function OrderApp() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historySearched, setHistorySearched] = useState(false);
   const [lastOrderPhone, setLastOrderPhone] = useState<string | null>(null);
+
+  // Chat state
+  const [chatPhone, setChatPhone] = useState("");
+  const [chatName, setChatName] = useState("");
+  const [chatPhoneConfirmed, setChatPhoneConfirmed] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; sender: string; message: string; createdAt: string }>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatSending, setChatSending] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const { items, addItem, updateQuantity, getTotalItems, getTotalPrice, clearCart } = useCartStore();
 
@@ -403,6 +413,54 @@ export function OrderApp() {
     }
   }
 
+  // Pre-fill chat phone from last order
+  useEffect(() => {
+    if (view === "chat" && lastOrderPhone && !chatPhoneConfirmed) {
+      setChatPhone(lastOrderPhone);
+    }
+  }, [view, lastOrderPhone, chatPhoneConfirmed]);
+
+  const fetchChatMessages = useCallback(async () => {
+    if (!chatPhoneConfirmed || !selectedBrand) return;
+    const res = await fetch(`/api/chat?phone=${encodeURIComponent(chatPhone)}&brand=${selectedBrand}`);
+    if (res.ok) setChatMessages(await res.json());
+  }, [chatPhoneConfirmed, chatPhone, selectedBrand]);
+
+  // Poll chat messages when in chat view
+  useEffect(() => {
+    if (view !== "chat" || !chatPhoneConfirmed) return;
+    fetchChatMessages();
+    const t = setInterval(fetchChatMessages, 3000);
+    return () => clearInterval(t);
+  }, [view, chatPhoneConfirmed, fetchChatMessages]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  async function sendChatMessage() {
+    if (!chatInput.trim() || !selectedBrand || chatSending) return;
+    setChatSending(true);
+    try {
+      await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: chatPhone,
+          brand: selectedBrand,
+          sender: "customer",
+          senderName: chatName || chatPhone,
+          message: chatInput.trim(),
+        }),
+      });
+      setChatInput("");
+      await fetchChatMessages();
+    } finally {
+      setChatSending(false);
+    }
+  }
+
   const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
     pending:   { label: "Menunggu",   color: "#92400e", bg: "#fef3c7" },
     confirmed: { label: "Dikonfirmasi", color: "#1e40af", bg: "#dbeafe" },
@@ -620,6 +678,120 @@ export function OrderApp() {
                     })}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CHAT ── */}
+        {view === "chat" && (
+          <div className="flex flex-col mx-4 mt-4 pb-24" style={{ minHeight: "60vh" }}>
+            {!chatPhoneConfirmed ? (
+              // ── Enter phone ──
+              <div className="rounded-2xl bg-white p-5 shadow-sm space-y-4">
+                <div className="flex flex-col items-center gap-2 pb-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: brand.primaryColor + "20" }}>
+                    <MessageSquare size={22} style={{ color: brand.primaryColor }} />
+                  </div>
+                  <h2 className="text-base font-bold text-[#1A0F0A]">Chat dengan Admin</h2>
+                  <p className="text-xs text-gray-400 text-center">Tanyakan apapun tentang pesananmu</p>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">Nama kamu</label>
+                    <input
+                      value={chatName}
+                      onChange={(e) => setChatName(e.target.value)}
+                      placeholder="Masukkan nama"
+                      className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">Nomor HP</label>
+                    <input
+                      type="tel"
+                      value={chatPhone}
+                      onChange={(e) => setChatPhone(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && chatPhone.trim().length >= 8 && setChatPhoneConfirmed(true)}
+                      placeholder="08xxxxxxxxxx"
+                      className="h-11 w-full rounded-xl border border-gray-200 px-4 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setChatPhoneConfirmed(true)}
+                    disabled={chatPhone.trim().length < 8}
+                    className="h-11 w-full rounded-xl font-semibold text-sm text-white disabled:opacity-50 transition-opacity"
+                    style={{ backgroundColor: brand.primaryColor }}
+                  >
+                    Mulai Chat
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // ── Chat interface ──
+              <div className="flex flex-col rounded-2xl bg-white shadow-sm overflow-hidden" style={{ minHeight: "60vh" }}>
+                {/* Chat header */}
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                  <button onClick={() => setChatPhoneConfirmed(false)} className="text-gray-400">
+                    <ArrowLeft size={18} />
+                  </button>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold" style={{ backgroundColor: brand.primaryColor }}>
+                    A
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#1A0F0A]">Admin {brand.name}</p>
+                    <p className="text-[10px] text-gray-400">Biasanya membalas dalam beberapa menit</p>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" style={{ maxHeight: "50vh" }}>
+                  {chatMessages.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+                      <span className="text-3xl">👋</span>
+                      <p className="text-sm text-gray-400">Halo! Ada yang bisa dibantu?</p>
+                    </div>
+                  )}
+                  {chatMessages.map((m) => (
+                    <div key={m.id} className={`flex ${m.sender === "customer" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
+                          m.sender === "customer"
+                            ? "text-white rounded-br-sm"
+                            : "bg-gray-100 text-gray-900 rounded-bl-sm"
+                        }`}
+                        style={m.sender === "customer" ? { backgroundColor: brand.primaryColor } : {}}
+                      >
+                        <p className="leading-snug">{m.message}</p>
+                        <p className={`text-[10px] mt-0.5 ${m.sender === "customer" ? "text-white/60" : "text-gray-400"}`}>
+                          {new Date(m.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={chatBottomRef} />
+                </div>
+
+                {/* Input */}
+                <div className="px-4 py-3 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendChatMessage()}
+                      placeholder="Ketik pesan..."
+                      className="flex-1 h-10 rounded-xl border border-gray-200 px-3 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+                    />
+                    <button
+                      onClick={sendChatMessage}
+                      disabled={!chatInput.trim() || chatSending}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white disabled:opacity-40"
+                      style={{ backgroundColor: brand.primaryColor }}
+                    >
+                      <Send size={15} />
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

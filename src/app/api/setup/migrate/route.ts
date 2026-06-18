@@ -85,5 +85,19 @@ export async function GET(req: NextRequest) {
 
   await run("brand_settings.is_open", `ALTER TABLE "brand_settings" ADD COLUMN IF NOT EXISTS "is_open" boolean NOT NULL DEFAULT true`);
 
+  // ── Chat Messages table ──────────────────────────────────────────────────
+  await run("chat_messages table", `
+    CREATE TABLE IF NOT EXISTS "chat_messages" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "session_id" text NOT NULL,
+      "brand_slug" text NOT NULL,
+      "sender" text NOT NULL,
+      "sender_name" text NOT NULL DEFAULT '',
+      "message" text NOT NULL,
+      "is_read" boolean NOT NULL DEFAULT false,
+      "created_at" timestamp NOT NULL DEFAULT now()
+    )
+  `);
+
   return NextResponse.json({ ok: true, results });
 }

@@ -113,6 +113,18 @@ export const brandSettings = pgTable("brand_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// ─── Chat Messages ────────────────────────────────────────────────────────────
+export const chatMessages = pgTable("chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: text("session_id").notNull(), // phone number
+  brandSlug: text("brand_slug").notNull(),
+  sender: text("sender").notNull(), // "customer" | "admin"
+  senderName: text("sender_name").notNull().default(""),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type DaySchedule = { isOpen: boolean; open: string; close: string };
 export type OpeningHours = Record<
