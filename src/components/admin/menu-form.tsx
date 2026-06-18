@@ -15,9 +15,11 @@ type MenuFormData = z.input<typeof menuItemSchema>;
 interface MenuFormProps {
   defaultValues?: Partial<MenuFormData> & { id?: string };
   mode: "create" | "edit";
+  // null = super admin (show selector), set = fixed brand
+  lockedBrand?: string | null;
 }
 
-export function MenuForm({ defaultValues, mode }: MenuFormProps) {
+export function MenuForm({ defaultValues, mode, lockedBrand }: MenuFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -36,7 +38,7 @@ export function MenuForm({ defaultValues, mode }: MenuFormProps) {
       category: "",
       isAvailable: true,
       isFeatured: false,
-      brandSlug: "dapur-bwaji",
+      brandSlug: (lockedBrand as "dapur-bwaji" | "hoki-dimsum" | undefined) ?? "dapur-bwaji",
       ...defaultValues,
     },
   });
@@ -87,14 +89,20 @@ export function MenuForm({ defaultValues, mode }: MenuFormProps) {
         />
         <div className="flex flex-col gap-1.5">
           <label htmlFor="brandSlug" className="text-sm font-medium text-gray-700">Brand</label>
-          <select
-            id="brandSlug"
-            className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-            {...register("brandSlug")}
-          >
-            <option value="dapur-bwaji">Dapur Bwaji</option>
-            <option value="hoki-dimsum">Hoki Dimsum</option>
-          </select>
+          {lockedBrand ? (
+            <div className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 flex items-center text-sm text-gray-500 capitalize">
+              {lockedBrand.replace("-", " ")}
+            </div>
+          ) : (
+            <select
+              id="brandSlug"
+              className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              {...register("brandSlug")}
+            >
+              <option value="dapur-bwaji">Dapur Bwaji</option>
+              <option value="hoki-dimsum">Hoki Dimsum</option>
+            </select>
+          )}
           {errors.brandSlug && <p className="text-xs text-red-500">{errors.brandSlug.message}</p>}
         </div>
       </div>

@@ -195,7 +195,7 @@ function OrderCard({
   );
 }
 
-export function KitchenDisplay() {
+export function KitchenDisplay({ brandLabel }: { brandLabel?: string | null }) {
   const [orders, setOrders] = useState<ActiveOrder[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [error, setError] = useState(false);
@@ -239,21 +239,28 @@ export function KitchenDisplay() {
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <ChefHat size={24} className="text-orange-500" />
-            Dapur — Pesanan Aktif
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-gray-900 flex flex-wrap items-center gap-2 leading-tight">
+            <span className="flex items-center gap-2">
+              <ChefHat size={20} className="text-orange-500 flex-none" />
+              Dapur — Pesanan Aktif
+            </span>
+            {brandLabel && (
+              <span className="text-xs font-medium rounded-full bg-orange-100 text-orange-600 px-2.5 py-0.5">
+                {brandLabel}
+              </span>
+            )}
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">
             {orders.length === 0 ? "Tidak ada pesanan aktif" : `${orders.length} pesanan aktif`}
-            &ensp;&middot;&ensp;Update otomatis setiap 10 detik
+            &ensp;&middot;&ensp;Auto-refresh 10 detik
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {error && (
-            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-600">
-              Gagal memuat data
+            <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-600">
+              Gagal memuat
             </span>
           )}
           <span className="text-xs text-gray-400">
@@ -261,9 +268,9 @@ export function KitchenDisplay() {
           </span>
           <button
             onClick={fetchOrders}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={12} />
             Refresh
           </button>
         </div>

@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { menuItems } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { MenuForm } from "@/components/admin/menu-form";
+import { auth } from "@/lib/auth";
+import { getSessionBrand } from "@/lib/session-brand";
 
 export const metadata: Metadata = { title: "Edit Menu" };
 
@@ -15,16 +17,19 @@ export default async function EditMenuPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await auth();
+  const brandFilter = getSessionBrand(session);
+
   const [item] = await db.select().from(menuItems).where(eq(menuItems.id, id));
   if (!item) notFound();
+
+  // Brand user hanya bisa edit menu milik brandnya
+  if (brandFilter && item.brandSlug !== brandFilter) notFound();
 
   return (
     <div className="space-y-6">
       <div>
-        <Link
-          href="/admin/menu"
-          className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-        >
+        <Link href="/admin/menu" className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
           <ChevronLeft size={15} /> Kembali
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Edit Menu</h1>
@@ -34,6 +39,7 @@ export default async function EditMenuPage({
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <MenuForm
           mode="edit"
+          lockedBrand={brandFilter}
           defaultValues={{
             id: item.id,
             name: item.name,
