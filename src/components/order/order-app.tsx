@@ -225,6 +225,32 @@ export function OrderApp() {
     }
   }, [view, lastOrderPhone, historySearched]);
 
+  // Pre-fill chat phone from last order
+  useEffect(() => {
+    if (view === "chat" && lastOrderPhone && !chatPhoneConfirmed) {
+      setChatPhone(lastOrderPhone);
+    }
+  }, [view, lastOrderPhone, chatPhoneConfirmed]);
+
+  const fetchChatMessages = useCallback(async () => {
+    if (!chatPhoneConfirmed || !selectedBrand) return;
+    const res = await fetch(`/api/chat?phone=${encodeURIComponent(chatPhone)}&brand=${selectedBrand}`);
+    if (res.ok) setChatMessages(await res.json());
+  }, [chatPhoneConfirmed, chatPhone, selectedBrand]);
+
+  // Poll chat messages when in chat view
+  useEffect(() => {
+    if (view !== "chat" || !chatPhoneConfirmed) return;
+    fetchChatMessages();
+    const t = setInterval(fetchChatMessages, 3000);
+    return () => clearInterval(t);
+  }, [view, chatPhoneConfirmed, fetchChatMessages]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
   const getQty = (id: string) => items.find((i) => i.menuItem.id === id)?.quantity ?? 0;
 
   // ── Brand picker screen (shown first, before main app) ──
@@ -412,32 +438,6 @@ export function OrderApp() {
       setHistorySearched(true);
     }
   }
-
-  // Pre-fill chat phone from last order
-  useEffect(() => {
-    if (view === "chat" && lastOrderPhone && !chatPhoneConfirmed) {
-      setChatPhone(lastOrderPhone);
-    }
-  }, [view, lastOrderPhone, chatPhoneConfirmed]);
-
-  const fetchChatMessages = useCallback(async () => {
-    if (!chatPhoneConfirmed || !selectedBrand) return;
-    const res = await fetch(`/api/chat?phone=${encodeURIComponent(chatPhone)}&brand=${selectedBrand}`);
-    if (res.ok) setChatMessages(await res.json());
-  }, [chatPhoneConfirmed, chatPhone, selectedBrand]);
-
-  // Poll chat messages when in chat view
-  useEffect(() => {
-    if (view !== "chat" || !chatPhoneConfirmed) return;
-    fetchChatMessages();
-    const t = setInterval(fetchChatMessages, 3000);
-    return () => clearInterval(t);
-  }, [view, chatPhoneConfirmed, fetchChatMessages]);
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
 
   async function sendChatMessage() {
     if (!chatInput.trim() || !selectedBrand || chatSending) return;
