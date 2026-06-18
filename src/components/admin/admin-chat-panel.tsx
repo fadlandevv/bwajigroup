@@ -99,10 +99,10 @@ export function AdminChatPanel() {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden" style={{ minHeight: "500px" }}>
+    <div className="flex flex-1 flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden min-h-0">
       {!active ? (
         // ── Session list ──────────────────────────────────────────────────
-        <div>
+        <div className="flex-1 overflow-y-auto">
           {sessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 mb-3">
@@ -146,7 +146,7 @@ export function AdminChatPanel() {
         </div>
       ) : (
         // ── Active conversation ───────────────────────────────────────────
-        <div className="flex flex-col h-full" style={{ minHeight: "500px" }}>
+        <div className="flex flex-1 flex-col min-h-0">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 shrink-0">
             <button onClick={() => setActive(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -162,7 +162,7 @@ export function AdminChatPanel() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 min-h-0">
             {messages.length === 0 && (
               <p className="text-center text-xs text-gray-400 py-8">Belum ada pesan</p>
             )}

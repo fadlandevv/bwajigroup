@@ -6,11 +6,11 @@ export const metadata: Metadata = { title: "Live Chat" };
 
 export default function AdminChatPage() {
   return (
-    <>
+    <div className="flex flex-1 flex-col min-h-0">
       <PageHeader title="Live Chat" description="Chat langsung dengan pelanggan" />
-      <PageContent>
+      <div className="flex flex-1 flex-col min-h-0 px-4 py-4 pb-24 md:px-8 md:py-5 md:pb-6">
         <AdminChatPanel />
-      </PageContent>
-    </>
+      </div>
+    </div>
   );
 }
