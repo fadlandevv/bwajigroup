@@ -6,6 +6,8 @@ import { eq, inArray, desc } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get("phone");
+  const brand = req.nextUrl.searchParams.get("brand");
+
   if (phone) {
     const customerOrders = await db
       .select()
@@ -14,7 +16,10 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(orders.createdAt));
     return NextResponse.json(customerOrders);
   }
-  const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+
+  const allOrders = brand
+    ? await db.select().from(orders).where(eq(orders.brandSlug, brand as "dapur-bwaji" | "hoki-dimsum")).orderBy(desc(orders.createdAt))
+    : await db.select().from(orders).orderBy(desc(orders.createdAt));
   return NextResponse.json(allOrders);
 }
 
