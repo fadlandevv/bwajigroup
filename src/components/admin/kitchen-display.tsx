@@ -24,6 +24,7 @@ type ActiveOrder = {
   deliveryType: string;
   totalAmount: number;
   createdAt: string;
+  updatedAt: string;
   items: OrderItem[];
 };
 
@@ -65,22 +66,60 @@ const STATUS_CONFIG: Record<
   },
 };
 
-function useElapsed(createdAt: string) {
-  const [elapsed, setElapsed] = useState("");
+const AUTO_CONFIRM_MS = 5 * 60 * 1000;
+function kitchenMs(totalQty: number) {
+  return (totalQty <= 7 ? 15 : 20) * 60 * 1000;
+}
+
+function fmt(ms: number) {
+  if (ms <= 0) return "00:00";
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function useOrderTimer(order: ActiveOrder) {
+  const totalQty = order.items.reduce((s, i) => s + i.quantity, 0);
+
+  const getTarget = () => {
+    if (order.status === "pending") {
+      return new Date(order.createdAt).getTime() + AUTO_CONFIRM_MS;
+    }
+    if (order.status === "confirmed" || order.status === "preparing") {
+      return new Date(order.updatedAt).getTime() + kitchenMs(totalQty);
+    }
+    return null;
+  };
+
+  const [remaining, setRemaining] = useState(() => {
+    const t = getTarget();
+    return t ? Math.max(0, t - Date.now()) : null;
+  });
 
   useEffect(() => {
-    function update() {
-      const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
-      if (diff < 60) setElapsed(`${diff}d`);
-      else if (diff < 3600) setElapsed(`${Math.floor(diff / 60)}m`);
-      else setElapsed(`${Math.floor(diff / 3600)}j ${Math.floor((diff % 3600) / 60)}m`);
-    }
-    update();
-    const id = setInterval(update, 10_000);
+    const t = getTarget();
+    if (t === null) { setRemaining(null); return; }
+    const tick = () => setRemaining(Math.max(0, t - Date.now()));
+    tick();
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [createdAt]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.status, order.updatedAt, totalQty]);
 
-  return elapsed;
+  if (remaining === null) return null;
+
+  if (order.status === "pending") {
+    const urgent = remaining < 60_000;
+    return {
+      label: remaining <= 0 ? "Mengkonfirmasi..." : `Auto-terima ${fmt(remaining)}`,
+      className: urgent ? "bg-red-100 text-red-600 animate-pulse" : "bg-orange-100 text-orange-600",
+    };
+  }
+  const urgent = remaining < 2 * 60_000;
+  return {
+    label: remaining <= 0 ? "Waktu habis!" : `Estimasi ${fmt(remaining)}`,
+    className: urgent ? "bg-red-100 text-red-600 animate-pulse" : "bg-blue-100 text-blue-600",
+  };
 }
 
 function OrderCard({
@@ -91,7 +130,7 @@ function OrderCard({
   onStatusChange: (id: string, status: string) => void;
 }) {
   const cfg = STATUS_CONFIG[order.status];
-  const elapsed = useElapsed(order.createdAt);
+  const timer = useOrderTimer(order);
   const [loading, setLoading] = useState<string | null>(null);
 
   async function handleAction(status: string) {
@@ -125,10 +164,12 @@ function OrderCard({
             {cfg.label}
           </span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-gray-400">
-          <Clock size={12} />
-          <span>{elapsed}</span>
-        </div>
+        {timer && (
+          <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${timer.className}`}>
+            <Clock size={11} />
+            {timer.label}
+          </span>
+        )}
       </div>
 
       {/* Customer */}

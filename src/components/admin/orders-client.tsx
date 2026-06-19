@@ -4,9 +4,35 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatRupiah } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Clock } from "lucide-react";
 import { PageHeader, PageContent } from "@/components/admin/page-header";
 import { BRAND_NAMES } from "@/lib/session-brand";
+
+const AUTO_CONFIRM_MS = 5 * 60 * 1000;
+
+function fmt(ms: number) {
+  if (ms <= 0) return "00:00";
+  const s = Math.floor(ms / 1000);
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function PendingTimer({ createdAt }: { createdAt: string }) {
+  const target = new Date(createdAt).getTime() + AUTO_CONFIRM_MS;
+  const [remaining, setRemaining] = useState(() => Math.max(0, target - Date.now()));
+
+  useEffect(() => {
+    const id = setInterval(() => setRemaining(Math.max(0, target - Date.now())), 1000);
+    return () => clearInterval(id);
+  }, [target]);
+
+  const urgent = remaining < 60_000;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${urgent ? "bg-red-100 text-red-600 animate-pulse" : "bg-orange-100 text-orange-600"}`}>
+      <Clock size={9} />
+      {remaining <= 0 ? "Mengkonfirmasi..." : fmt(remaining)}
+    </span>
+  );
+}
 
 type Order = {
   id: string;
@@ -17,6 +43,7 @@ type Order = {
   paymentMethod: string;
   totalAmount: number;
   createdAt: string;
+  updatedAt: string;
 };
 
 const statusVariantMap: Record<string, "default" | "success" | "warning" | "danger" | "gray"> = {
@@ -70,9 +97,10 @@ export function AdminOrdersClient({ brandFilter }: { brandFilter: string | null 
             <Link key={order.id} href={`/admin/orders/${order.id}`}
               className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 active:bg-gray-50">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="font-mono text-xs font-bold text-gray-500">#{order.id.slice(0, 6).toUpperCase()}</span>
                   <Badge variant={statusVariantMap[order.status] ?? "gray"}>{statusLabelMap[order.status] ?? order.status}</Badge>
+                  {order.status === "pending" && <PendingTimer createdAt={order.createdAt} />}
                 </div>
                 <p className="font-semibold text-gray-900">{order.customerName}</p>
                 <p className="text-xs text-gray-400 mt-0.5 capitalize">
@@ -122,7 +150,10 @@ export function AdminOrdersClient({ brandFilter }: { brandFilter: string | null 
                   <td className="px-4 py-3 uppercase text-gray-500">{order.paymentMethod}</td>
                   <td className="px-4 py-3 text-right font-medium text-gray-900">{formatRupiah(order.totalAmount)}</td>
                   <td className="px-4 py-3 text-center">
-                    <Badge variant={statusVariantMap[order.status] ?? "gray"}>{statusLabelMap[order.status] ?? order.status}</Badge>
+                    <div className="flex flex-col items-center gap-1">
+                      <Badge variant={statusVariantMap[order.status] ?? "gray"}>{statusLabelMap[order.status] ?? order.status}</Badge>
+                      {order.status === "pending" && <PendingTimer createdAt={order.createdAt} />}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link href={`/admin/orders/${order.id}`} className="text-orange-500 hover:underline">Detail</Link>
