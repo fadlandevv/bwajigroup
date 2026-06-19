@@ -1130,7 +1130,7 @@ export function OrderApp() {
       {/* ── BOTTOM NAV (hanya untuk beranda/menu/keranjang) ── */}
       {!isFullscreen && (
         <div className="border-t border-gray-100 bg-white">
-          <div className="flex items-center justify-around px-8 py-3">
+          <div className="flex items-center justify-around px-2 py-3">
             {TABS.map(({ tab, Icon, label }) => {
               const isActive = view === tab;
               const showBadge = tab === "keranjang" && totalItems > 0;
