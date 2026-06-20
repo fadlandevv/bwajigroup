@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { formatRupiah } from "@/lib/utils";
 import { OrderStatusUpdater } from "@/components/admin/order-status-updater";
+import { OrderTimerBar } from "@/components/admin/order-timer-bar";
 import { PageHeader, PageContent } from "@/components/admin/page-header";
 
 export const metadata: Metadata = { title: "Detail Order" };
@@ -40,6 +41,7 @@ export default async function OrderDetailPage({
   if (!order) notFound();
 
   const items = await db.select().from(orderItems).where(eq(orderItems.orderId, id));
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <>
@@ -100,6 +102,14 @@ export default async function OrderDetailPage({
             <span className="text-sm font-bold text-gray-900">{formatRupiah(order.totalAmount)}</span>
           </div>
         </div>
+
+        {/* Timer */}
+        <OrderTimerBar
+          status={order.status}
+          createdAt={order.createdAt.toISOString()}
+          updatedAt={order.updatedAt.toISOString()}
+          totalItems={totalItems}
+        />
 
         {/* Update Status */}
         <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
