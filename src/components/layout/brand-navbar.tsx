@@ -1,17 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ShoppingCart } from "lucide-react";
-import { useCartStore } from "@/stores/cart-store";
 import type { Brand } from "@/types/brand";
 
 export function BrandNavbar({ brand }: { brand: Brand }) {
-  const totalItems = useCartStore((s) => s.getTotalItems());
-  const openCart = useCartStore((s) => s.openCart);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
   const pillBg = brand.slug === "dapur-bwaji" ? "#FFD6B0" : "#FFBABA";
 
   return (
@@ -45,19 +37,14 @@ export function BrandNavbar({ brand }: { brand: Brand }) {
           </Link>
         </nav>
 
-        {/* Cart */}
-        <button
-          onClick={openCart}
-          className="relative ml-auto flex h-8 w-8 items-center justify-center rounded-full text-white transition-opacity hover:opacity-75"
+        {/* Pesan */}
+        <Link
+          href="/pesan"
+          className="ml-auto flex h-8 items-center justify-center rounded-full px-4 text-xs font-bold text-white transition-opacity hover:opacity-75"
           style={{ backgroundColor: brand.primaryColor }}
         >
-          <ShoppingCart size={14} />
-          {mounted && totalItems > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#1D1A40] text-[9px] font-bold text-white">
-              {totalItems}
-            </span>
-          )}
-        </button>
+          Pesan
+        </Link>
       </div>
     </header>
   );

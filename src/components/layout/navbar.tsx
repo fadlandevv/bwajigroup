@@ -1,18 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, Utensils } from "lucide-react";
+import { Utensils } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useCartStore } from "@/stores/cart-store";
 
 export function Navbar() {
-  const totalItems = useCartStore((s) => s.getTotalItems());
-  const openCart = useCartStore((s) => s.openCart);
-  const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const handler = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", handler);
     return () => window.removeEventListener("scroll", handler);
@@ -53,18 +48,6 @@ export function Navbar() {
           <span className="hidden sm:inline">Pesan Sekarang</span>
           <span className="sm:hidden">Pesan</span>
         </Link>
-
-        <button
-          onClick={openCart}
-          className="relative ml-3 flex h-9 w-9 items-center justify-center rounded-full border border-[#E8D5C0] text-[#7A6955] transition-colors hover:bg-[#FAF3EB]"
-        >
-          <ShoppingCart size={16} />
-          {mounted && totalItems > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#C0272D] text-[10px] font-bold text-white">
-              {totalItems}
-            </span>
-          )}
-        </button>
       </div>
     </header>
   );
