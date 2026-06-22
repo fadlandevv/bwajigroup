@@ -786,7 +786,6 @@ export function OrderApp() {
             <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100">
               <ArrowLeft size={19} />
             </Link>
-            <span />
             <button
               onClick={() => setView("keranjang")}
               className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100"
