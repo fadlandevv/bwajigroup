@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed,
-  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send, X, Receipt, CircleUser, Camera, Eye, EyeOff, MapPin, Lock, ChevronRight,
+  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, Send, X, Receipt, CircleUser, Camera, Eye, EyeOff, MapPin, Lock, ChevronRight,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { useCustomerStore } from "@/stores/customer-store";
@@ -801,9 +801,7 @@ export function OrderApp() {
           <div
             className="mb-3 rounded-xl px-3 py-2 text-center text-xs font-semibold"
             style={{ backgroundColor: `${brand.primaryColor}15`, color: brand.primaryColor }}
-          >
-            {brand.name}
-          </div>
+          />
         </div>
       )}
 
