@@ -233,7 +233,7 @@ export function OrderApp() {
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
       customerName: customer?.name ?? "",
-      customerPhone: customer?.phone ?? "",
+      customerPhone: customer?.phone?.startsWith("0") ? "+62" + customer.phone.slice(1) : (customer?.phone ?? ""),
       paymentMethod: "qris",
       deliveryType: "pickup",
     },
@@ -260,11 +260,10 @@ export function OrderApp() {
   // Auto-fill checkout form dari biodata akun
   useEffect(() => {
     if (view === "checkout" && customer) {
-      reset((prev) => ({
-        ...prev,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-      }));
+      const phone = customer.phone.startsWith("0")
+        ? "+62" + customer.phone.slice(1)
+        : customer.phone;
+      reset((prev) => ({ ...prev, customerName: customer.name, customerPhone: phone }));
     }
   }, [view, customer, reset]);
 
