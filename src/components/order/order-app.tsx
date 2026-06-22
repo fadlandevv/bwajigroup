@@ -1545,7 +1545,6 @@ export function OrderApp() {
                 {/* Info */}
                 <div className="rounded-2xl bg-gray-50 p-4 space-y-2">
                   {[
-                    { label: "Brand", value: selectedOrder.brandSlug === "dapur-bwaji" ? "Dapur Bwaji" : "Hoki Dimsum" },
                     { label: "Nama", value: selectedOrder.customerName },
                     { label: "Pembayaran", value: selectedOrder.paymentMethod.toUpperCase() },
                     { label: "Pengiriman", value: selectedOrder.deliveryType === "pickup" ? "Ambil di tempat" : "Delivery" },
