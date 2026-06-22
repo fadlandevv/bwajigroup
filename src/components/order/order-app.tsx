@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed,
-  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, Send, X, Receipt, CircleUser, Camera, Eye, EyeOff, MapPin, Lock, ChevronRight,
+  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send, X, Receipt, CircleUser, Camera, Eye, EyeOff, MapPin, Lock, ChevronRight,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { useCustomerStore } from "@/stores/customer-store";
@@ -44,11 +44,11 @@ type OrderItem = {
   subtotal: number;
 };
 
-const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "chat" | "keranjang" | "profil">; Icon: typeof Home; label: string }> = [
+const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "chat" | "profil">; Icon: typeof Home; label: string }> = [
   { tab: "beranda", Icon: Home, label: "Beranda" },
   { tab: "menu", Icon: UtensilsCrossed, label: "Menu" },
   { tab: "history", Icon: Clock, label: "History" },
-  { tab: "keranjang", Icon: ShoppingBag, label: "Keranjang" },
+  { tab: "chat", Icon: MessageSquare, label: "Chat" },
   { tab: "profil", Icon: CircleUser, label: "Profil" },
 ];
 
@@ -1785,7 +1785,7 @@ export function OrderApp() {
           <div className="flex items-center justify-around px-2 py-3">
             {TABS.map(({ tab, Icon, label }) => {
               const isActive = view === tab;
-              const showBadge = tab === "keranjang" && totalItems > 0;
+              const showBadge = false;
               const handleTabClick = () => {
                 if (tab === "history") setHistorySearched(false);
                 setView(tab);
