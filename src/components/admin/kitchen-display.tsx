@@ -15,6 +15,7 @@ type OrderItem = {
 
 type ActiveOrder = {
   id: string;
+  orderCode: string | null;
   brandSlug: string;
   customerName: string;
   customerPhone: string;
@@ -157,9 +158,15 @@ function OrderCard({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-bold text-gray-700">
-            #{order.id.slice(0, 6).toUpperCase()}
-          </span>
+          {order.orderCode ? (
+            <span className="font-mono text-lg font-black tracking-widest text-gray-900">
+              {order.orderCode}
+            </span>
+          ) : (
+            <span className="font-mono text-sm font-bold text-gray-700">
+              #{order.id.slice(0, 6).toUpperCase()}
+            </span>
+          )}
           <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.badge}`}>
             {cfg.label}
           </span>
