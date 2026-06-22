@@ -798,10 +798,6 @@ export function OrderApp() {
               )}
             </button>
           </div>
-          <div
-            className="mb-3 rounded-xl px-3 py-2 text-center text-xs font-semibold"
-            style={{ backgroundColor: `${brand.primaryColor}15`, color: brand.primaryColor }}
-          />
         </div>
       )}
 
