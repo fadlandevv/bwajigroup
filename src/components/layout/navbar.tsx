@@ -25,7 +25,7 @@ export function Navbar() {
           className="mr-auto text-lg font-black tracking-tight text-[#1A0F0A]"
           style={{ fontFamily: "var(--font-archivo)" }}
         >
-          Bwaji<span className="text-[#C0272D]">Group</span>
+          <span className="text-[#C0272D]">Bwaji</span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
