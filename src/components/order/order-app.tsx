@@ -223,6 +223,8 @@ export function OrderApp() {
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
   const [showOrderPicker, setShowOrderPicker] = useState(false);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const lastSeenChatCount = useRef(0);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const { items, addItem, updateQuantity, getTotalItems, getTotalPrice, clearCart } = useCartStore();
@@ -302,19 +304,17 @@ export function OrderApp() {
     }
   }, [view, lastOrderPhone, historySearched, customer]);
 
-  // Init chat session from localStorage
+  // Init chat session dari localStorage saat mount
   useEffect(() => {
-    if (view === "chat" && !chatSessionId) {
-      const stored = localStorage.getItem("bwaji_chat_sid");
-      if (stored) {
-        setChatSessionId(stored);
-      } else {
-        const id = crypto.randomUUID();
-        localStorage.setItem("bwaji_chat_sid", id);
-        setChatSessionId(id);
-      }
+    const stored = localStorage.getItem("bwaji_chat_sid");
+    if (stored) {
+      setChatSessionId(stored);
+    } else {
+      const id = crypto.randomUUID();
+      localStorage.setItem("bwaji_chat_sid", id);
+      setChatSessionId(id);
     }
-  }, [view, chatSessionId]);
+  }, []);
 
   const fetchChatMessages = useCallback(async () => {
     if (!chatSessionId || !selectedBrand) return;
@@ -329,6 +329,31 @@ export function OrderApp() {
     const t = setInterval(fetchChatMessages, 3000);
     return () => clearInterval(t);
   }, [view, chatSessionId, fetchChatMessages]);
+
+  // Reset unread saat buka chat + update lastSeen
+  useEffect(() => {
+    if (view === "chat") {
+      lastSeenChatCount.current = chatMessages.filter((m) => m.sender === "admin").length;
+      setUnreadChat(0);
+    }
+  }, [view, chatMessages]);
+
+  // Poll unread admin messages saat TIDAK di chat view
+  useEffect(() => {
+    if (!chatSessionId || !selectedBrand || view === "chat") return;
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/chat?phone=${encodeURIComponent(chatSessionId)}&brand=${selectedBrand}`);
+        if (!res.ok) return;
+        const msgs: Array<{ sender: string }> = await res.json();
+        const adminCount = msgs.filter((m) => m.sender === "admin").length;
+        setUnreadChat(Math.max(0, adminCount - lastSeenChatCount.current));
+      } catch { /* silent */ }
+    };
+    check();
+    const t = setInterval(check, 15000);
+    return () => clearInterval(t);
+  }, [chatSessionId, selectedBrand, view]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -1785,7 +1810,7 @@ export function OrderApp() {
           <div className="flex items-center justify-around px-2 py-3">
             {TABS.map(({ tab, Icon, label }) => {
               const isActive = view === tab;
-              const showBadge = false;
+              const showBadge = tab === "chat" && unreadChat > 0;
               const handleTabClick = () => {
                 if (tab === "history") setHistorySearched(false);
                 setView(tab);
@@ -1805,7 +1830,7 @@ export function OrderApp() {
                     )}
                     {showBadge && (
                       <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
-                        {totalItems}
+                        {unreadChat > 9 ? "9+" : unreadChat}
                       </span>
                     )}
                   </div>
