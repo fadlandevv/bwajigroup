@@ -26,6 +26,7 @@ export const createOrderSchema = z
     paymentMethod: z.enum(["cash", "transfer", "qris"]),
     deliveryType: z.enum(["pickup", "delivery"]),
     deliveryAddress: z.string().optional(),
+    customerId: z.string().uuid().optional(),
     items: z
       .array(
         z.object({

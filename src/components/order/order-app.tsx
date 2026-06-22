@@ -11,13 +11,14 @@ import {
   Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send, X, Receipt,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
+import { useCustomerStore } from "@/stores/customer-store";
 import { BRANDS } from "@/types/brand";
 import type { Brand, BrandSlug } from "@/types/brand";
 import type { MenuItem } from "@/types/menu";
 import { formatRupiah } from "@/lib/utils";
 import { orderFormSchema } from "@/lib/validations/order";
 
-type View = "beranda" | "menu" | "history" | "chat" | "keranjang" | "checkout" | "payment" | "success";
+type View = "auth" | "beranda" | "menu" | "history" | "chat" | "keranjang" | "checkout" | "payment" | "success";
 type CheckoutFormData = z.infer<typeof orderFormSchema>;
 
 type OrderHistory = {
@@ -147,6 +148,7 @@ function FeaturedCard({ item, brand, qty, onAdd, onDec }: CardProps) {
 }
 
 export function OrderApp() {
+  const { customer, setCustomer, clearCustomer } = useCustomerStore();
   const [view, setView] = useState<View>("beranda");
   const [selectedBrand, setSelectedBrand] = useState<BrandSlug | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -167,6 +169,19 @@ export function OrderApp() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historySearched, setHistorySearched] = useState(false);
   const [lastOrderPhone, setLastOrderPhone] = useState<string | null>(null);
+
+  // Auth form state
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authPhone, setAuthPhone] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!customer && view !== "auth") setView("auth");
+  }, [customer, view]);
 
   // Chat state
   const [chatSessionId, setChatSessionId] = useState("");
@@ -215,18 +230,27 @@ export function OrderApp() {
     load();
   }, [selectedBrand]);
 
-  // Auto-search history when navigating there after an order
+  // Auto-load history when navigating there (by customerId if logged in, else by phone)
   useEffect(() => {
-    if (view === "history" && lastOrderPhone && !historySearched) {
-      setHistoryPhone(lastOrderPhone);
-      setHistoryLoading(true);
-      fetch(`/api/orders?phone=${encodeURIComponent(lastOrderPhone)}`)
-        .then((r) => r.json())
-        .then((data) => { setHistoryOrders(data); setHistorySearched(true); })
-        .catch(() => setHistorySearched(true))
-        .finally(() => setHistoryLoading(false));
+    if (view === "history" && !historySearched) {
+      if (customer) {
+        setHistoryLoading(true);
+        fetch(`/api/orders?customerId=${encodeURIComponent(customer.id)}`)
+          .then((r) => r.json())
+          .then((data) => { setHistoryOrders(data); setHistorySearched(true); })
+          .catch(() => setHistorySearched(true))
+          .finally(() => setHistoryLoading(false));
+      } else if (lastOrderPhone) {
+        setHistoryPhone(lastOrderPhone);
+        setHistoryLoading(true);
+        fetch(`/api/orders?phone=${encodeURIComponent(lastOrderPhone)}`)
+          .then((r) => r.json())
+          .then((data) => { setHistoryOrders(data); setHistorySearched(true); })
+          .catch(() => setHistorySearched(true))
+          .finally(() => setHistoryLoading(false));
+      }
     }
-  }, [view, lastOrderPhone, historySearched]);
+  }, [view, lastOrderPhone, historySearched, customer]);
 
   // Init chat session from localStorage
   useEffect(() => {
@@ -263,18 +287,113 @@ export function OrderApp() {
 
   const getQty = (id: string) => items.find((i) => i.menuItem.id === id)?.quantity ?? 0;
 
+  // ── Auth gate (login / register) ─────────────────────────────────────────
+  if (view === "auth" || !customer) {
+    return (
+      <div className="flex h-full flex-col bg-[#FFFCF8]">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
+          <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-[#FAF3EB]">
+            <ArrowLeft size={19} />
+          </Link>
+          <span className="text-sm font-medium text-[#7A6955]">Kembali ke Home</span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-8">
+          <div className="mb-8 pt-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#C0272D]">Akun</span>
+            <h1 className="mt-2 text-3xl font-black leading-tight text-[#1A0F0A]" style={{ fontFamily: "var(--font-archivo)" }}>
+              {authMode === "login" ? "Masuk ke\nakun kamu" : "Daftar\nakun baru"}
+            </h1>
+            <p className="mt-2 text-sm text-[#7A6955]">
+              {authMode === "login" ? "Biar kamu bisa tracking pesanan kapan saja." : "Gratis, cukup nomor HP & password."}
+            </p>
+          </div>
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            {authMode === "register" && (
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Nama Lengkap</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Budi Santoso"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-900 outline-none focus:border-[#E85D04] focus:ring-2 focus:ring-[#E85D04]/20"
+                  required
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-500">Nomor HP</label>
+              <input
+                type="tel"
+                placeholder="Contoh: 081234567890"
+                value={authPhone}
+                onChange={(e) => setAuthPhone(e.target.value)}
+                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-900 outline-none focus:border-[#E85D04] focus:ring-2 focus:ring-[#E85D04]/20"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-500">Password</label>
+              <input
+                type="password"
+                placeholder={authMode === "register" ? "Minimal 6 karakter" : "Password kamu"}
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-900 outline-none focus:border-[#E85D04] focus:ring-2 focus:ring-[#E85D04]/20"
+                required
+              />
+            </div>
+
+            {authError && (
+              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{authError}</div>
+            )}
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full rounded-2xl py-4 text-sm font-bold text-white disabled:opacity-60"
+              style={{ backgroundColor: "#E85D04" }}
+            >
+              {authLoading ? "Memproses..." : authMode === "login" ? "Masuk" : "Daftar"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-gray-500">
+            {authMode === "login" ? "Belum punya akun?" : "Sudah punya akun?"}{" "}
+            <button
+              onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthError(""); }}
+              className="font-semibold text-[#E85D04]"
+            >
+              {authMode === "login" ? "Daftar sekarang" : "Masuk di sini"}
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── Brand picker screen (shown first, before main app) ──
   if (!selectedBrand) {
     return (
       <div className="flex h-full flex-col bg-[#FFFCF8]">
-        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-          <Link
-            href="/"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-[#FAF3EB]"
+        <div className="flex items-center justify-between px-5 pb-4 pt-5">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-[#FAF3EB]">
+              <ArrowLeft size={19} />
+            </Link>
+            <span className="text-sm font-medium text-[#7A6955]">Kembali ke Home</span>
+          </div>
+          <button
+            onClick={() => { clearCustomer(); setView("auth"); setSelectedBrand(null); }}
+            className="text-xs font-medium text-gray-400 hover:text-red-500"
           >
-            <ArrowLeft size={19} />
-          </Link>
-          <span className="text-sm font-medium text-[#7A6955]">Kembali ke Home</span>
+            Keluar
+          </button>
         </div>
 
         <div className="px-5 pb-8 pt-4">
@@ -285,7 +404,7 @@ export function OrderApp() {
             className="mt-2 text-3xl font-black leading-tight text-[#1A0F0A]"
             style={{ fontFamily: "var(--font-archivo)" }}
           >
-            Mau pesan<br />dari mana?
+            Halo, {customer.name.split(" ")[0]}!<br />Mau pesan apa?
           </h1>
           <p className="mt-2 text-sm text-[#7A6955]">
             Pilih brand favoritmu untuk mulai memesan
@@ -348,6 +467,7 @@ export function OrderApp() {
       const payload = {
         ...data,
         brandSlug: selectedBrand,
+        customerId: customer?.id ?? undefined,
         items: items.map((i) => ({ menuItemId: i.menuItem.id, quantity: i.quantity })),
       };
 
@@ -441,6 +561,28 @@ export function OrderApp() {
     }
   }
 
+  async function handleAuth(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError("");
+    setAuthLoading(true);
+    try {
+      const res = await fetch("/api/customer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: authMode, phone: authPhone, password: authPassword, name: authName }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAuthError(data.error ?? "Terjadi kesalahan"); return; }
+      setCustomer({ id: data.id, name: data.name, phone: data.phone });
+      setView("beranda");
+      setAuthPhone(""); setAuthPassword(""); setAuthName(""); setAuthError("");
+    } catch {
+      setAuthError("Tidak bisa terhubung ke server.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   function printReceipt() {
     const win = window.open("", "_blank", "width=380,height=640");
     if (!win) { alert("Izinkan popup di browser untuk mencetak struk."); return; }
@@ -506,11 +648,16 @@ export function OrderApp() {
   }
 
   async function searchHistory() {
-    if (!historyPhone.trim()) return;
     setHistoryLoading(true);
     setHistorySearched(false);
     try {
-      const res = await fetch(`/api/orders?phone=${encodeURIComponent(historyPhone.trim())}`);
+      const url = customer
+        ? `/api/orders?customerId=${encodeURIComponent(customer.id)}`
+        : historyPhone.trim()
+          ? `/api/orders?phone=${encodeURIComponent(historyPhone.trim())}`
+          : null;
+      if (!url) return;
+      const res = await fetch(url);
       setHistoryOrders(await res.json());
     } finally {
       setHistoryLoading(false);
@@ -706,30 +853,22 @@ export function OrderApp() {
         {/* ── HISTORY ── */}
         {view === "history" && (
           <div className="mx-4 mt-4 pb-6">
-            <h2 className="mb-1 text-lg font-bold text-[#1A0F0A]">Riwayat Pesanan</h2>
-            <p className="mb-4 text-xs text-gray-400">Masukkan nomor HP yang kamu gunakan saat pesan</p>
-            <div className="flex gap-2">
-              <input
-                type="tel"
-                value={historyPhone}
-                onChange={(e) => setHistoryPhone(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && searchHistory()}
-                placeholder="08xxxxxxxxxx"
-                className="h-11 flex-1 rounded-xl border border-gray-200 bg-white px-4 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
-              />
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold text-[#1A0F0A]">Riwayat Pesanan</h2>
               <button
                 onClick={searchHistory}
-                disabled={historyLoading || !historyPhone.trim()}
-                className="flex h-11 w-11 items-center justify-center rounded-xl text-white disabled:opacity-50"
+                disabled={historyLoading}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white disabled:opacity-50"
                 style={{ backgroundColor: brand.primaryColor }}
               >
-                {historyLoading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                ) : (
-                  <Search size={17} />
-                )}
+                {historyLoading
+                  ? <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  : <Search size={15} />}
               </button>
             </div>
+            <p className="mb-4 text-xs text-gray-400">
+              Pesanan akun <span className="font-semibold text-gray-600">{customer.name}</span>
+            </p>
 
             {historySearched && !historyLoading && (
               <div className="mt-4">

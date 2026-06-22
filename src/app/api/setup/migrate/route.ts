@@ -86,6 +86,18 @@ export async function GET(req: NextRequest) {
 
   await run("brand_settings.is_open", `ALTER TABLE "brand_settings" ADD COLUMN IF NOT EXISTS "is_open" boolean NOT NULL DEFAULT true`);
 
+  // ── Customers table ──────────────────────────────────────────────────────
+  await run("customers table", `
+    CREATE TABLE IF NOT EXISTS "customers" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "name" text NOT NULL,
+      "phone" text NOT NULL UNIQUE,
+      "password" text NOT NULL,
+      "created_at" timestamp NOT NULL DEFAULT now()
+    )
+  `);
+  await run("orders.customer_id", `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "customer_id" uuid REFERENCES "customers"("id") ON DELETE SET NULL`);
+
   // ── Chat Messages table ──────────────────────────────────────────────────
   await run("chat_messages table", `
     CREATE TABLE IF NOT EXISTS "chat_messages" (

@@ -29,6 +29,15 @@ export const deliveryTypeEnum = pgEnum("delivery_type", ["pickup", "delivery"]);
 
 export const roleEnum = pgEnum("user_role", ["admin", "staff"]);
 
+// ─── Customers (pemesan) ─────────────────────────────────────────────────────
+export const customers = pgTable("customers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  phone: text("phone").notNull().unique(),
+  password: text("password").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ─── Users (admin) ───────────────────────────────────────────────────────────
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -60,6 +69,7 @@ export const menuItems = pgTable("menu_items", {
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   orderCode: text("order_code"),
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
   brandSlug: brandEnum("brand_slug").notNull(),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),

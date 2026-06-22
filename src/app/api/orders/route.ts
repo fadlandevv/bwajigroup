@@ -8,6 +8,17 @@ export async function GET(req: NextRequest) {
   const phone = req.nextUrl.searchParams.get("phone");
   const brand = req.nextUrl.searchParams.get("brand");
 
+  const customerId = req.nextUrl.searchParams.get("customerId");
+
+  if (customerId) {
+    const customerOrders = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.customerId, customerId))
+      .orderBy(desc(orders.createdAt));
+    return NextResponse.json(customerOrders);
+  }
+
   if (phone) {
     const customerOrders = await db
       .select()
@@ -43,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   const {
     brandSlug, customerName, customerPhone, customerNote,
-    paymentMethod, deliveryType, deliveryAddress, items,
+    paymentMethod, deliveryType, deliveryAddress, items, customerId,
   } = parsed.data;
 
   const menuItemIds = items.map((i) => i.menuItemId);
@@ -73,6 +84,7 @@ export async function POST(req: NextRequest) {
     .insert(orders)
     .values({
       orderCode: generateOrderCode(),
+      customerId: customerId ?? null,
       brandSlug, customerName, customerPhone, customerNote,
       paymentMethod, deliveryType, deliveryAddress: deliveryAddress ?? null, totalAmount,
     })
