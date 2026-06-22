@@ -227,10 +227,16 @@ export function OrderApp() {
     handleSubmit,
     watch,
     setError,
+    reset,
     formState: { errors },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(orderFormSchema),
-    defaultValues: { paymentMethod: "qris", deliveryType: "pickup" },
+    defaultValues: {
+      customerName: customer?.name ?? "",
+      customerPhone: customer?.phone ?? "",
+      paymentMethod: "qris",
+      deliveryType: "pickup",
+    },
   });
 
   const paymentMethod = watch("paymentMethod");
@@ -250,6 +256,17 @@ export function OrderApp() {
     };
     load();
   }, [selectedBrand]);
+
+  // Auto-fill checkout form dari biodata akun
+  useEffect(() => {
+    if (view === "checkout" && customer) {
+      reset((prev) => ({
+        ...prev,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+      }));
+    }
+  }, [view, customer, reset]);
 
   // Auto-load history when navigating there (by customerId if logged in, else by phone)
   useEffect(() => {
