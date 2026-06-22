@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
   await run("orders.delivery_type", `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "delivery_type" "delivery_type" NOT NULL DEFAULT 'pickup'`);
   await run("orders.delivery_address", `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "delivery_address" text`);
   await run("orders.payment_proof", `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "payment_proof" text`);
+  await run("orders.order_code", `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "order_code" text`);
 
   // ── Brand-scoped users ───────────────────────────────────────────────────
   await run("users.brand_slug", `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "brand_slug" "brand_slug"`);

@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed,
-  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send, X,
+  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send, X, Receipt,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { BRANDS } from "@/types/brand";
@@ -22,6 +22,7 @@ type CheckoutFormData = z.infer<typeof orderFormSchema>;
 
 type OrderHistory = {
   id: string;
+  orderCode: string | null;
   brandSlug: string;
   customerName: string;
   customerPhone: string;
@@ -154,6 +155,9 @@ export function OrderApp() {
   const [submitting, setSubmitting] = useState(false);
   const [totalAmount, setTotalAmount] = useState(0);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderCode, setOrderCode] = useState<string | null>(null);
+  const [receiptItems, setReceiptItems] = useState<Array<{ name: string; qty: number; price: number }>>([]);
+  const [receiptName, setReceiptName] = useState("");
   const [copied, setCopied] = useState(false);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
@@ -366,6 +370,10 @@ export function OrderApp() {
 
       const order = await res.json();
       const amount = getTotalPrice();
+      // Save receipt data before clearing cart
+      setReceiptItems(items.map((i) => ({ name: i.menuItem.name, qty: i.quantity, price: i.menuItem.price })));
+      setReceiptName(data.customerName);
+      setOrderCode(order.orderCode ?? null);
       clearCart();
       setLastOrderPhone(data.customerPhone);
       if (data.paymentMethod === "qris") {
@@ -375,6 +383,7 @@ export function OrderApp() {
         setProofUploaded(false);
         setView("payment");
       } else {
+        setTotalAmount(amount);
         setView("success");
       }
     } catch (err) {
@@ -430,6 +439,70 @@ export function OrderApp() {
     } finally {
       setProofUploading(false);
     }
+  }
+
+  function printReceipt() {
+    const win = window.open("", "_blank", "width=380,height=640");
+    if (!win) { alert("Izinkan popup di browser untuk mencetak struk."); return; }
+
+    const dateStr = new Date().toLocaleDateString("id-ID", {
+      day: "numeric", month: "long", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+    const itemRows = receiptItems
+      .map(
+        (i) =>
+          `<tr>
+            <td style="padding:3px 0">${i.name}</td>
+            <td style="text-align:center;padding:3px 6px">x${i.qty}</td>
+            <td style="text-align:right;padding:3px 0">${formatRupiah(i.price * i.qty)}</td>
+          </tr>`
+      )
+      .join("");
+
+    win.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="utf-8"/>
+      <title>Struk ${orderCode ?? ""}</title>
+      <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:monospace;font-size:13px;max-width:300px;margin:0 auto;padding:16px;color:#111}
+        .center{text-align:center}
+        .brand{font-size:16px;font-weight:900;letter-spacing:1px}
+        .divider{border:none;border-top:1px dashed #999;margin:10px 0}
+        .code{font-size:40px;font-weight:900;letter-spacing:6px;text-align:center;margin:8px 0}
+        .label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;text-align:center}
+        table{width:100%;border-collapse:collapse}
+        .total-row td{font-weight:900;font-size:14px;border-top:1px dashed #999;padding-top:8px;margin-top:4px}
+        .footer{text-align:center;font-size:11px;color:#666;margin-top:12px}
+        @media print{body{padding:0}}
+      </style>
+    </head><body>
+      <div class="center">
+        <div class="brand">BWAJI GROUP</div>
+        <div style="font-size:11px;color:#555;margin-top:2px">${brand.name}</div>
+      </div>
+      <hr class="divider"/>
+      <div class="label">Kode Pesanan</div>
+      <div class="code">${orderCode ?? "—"}</div>
+      <hr class="divider"/>
+      <table>
+        <tr><td style="color:#666;font-size:11px">Nama</td><td colspan="2" style="text-align:right">${receiptName}</td></tr>
+        <tr><td style="color:#666;font-size:11px">Tanggal</td><td colspan="2" style="text-align:right;font-size:11px">${dateStr}</td></tr>
+      </table>
+      <hr class="divider"/>
+      <table>${itemRows}
+        <tr class="total-row">
+          <td colspan="2">TOTAL</td>
+          <td style="text-align:right">${formatRupiah(totalAmount)}</td>
+        </tr>
+      </table>
+      <div class="footer" style="margin-top:16px">
+        Tunjukkan kode pesanan saat mengambil.<br/>
+        Terima kasih sudah memesan! 🙏
+      </div>
+      <script>window.onload=()=>{window.print();}</script>
+    </body></html>`);
+    win.document.close();
   }
 
   async function searchHistory() {
@@ -686,6 +759,12 @@ export function OrderApp() {
                               {s.label}
                             </span>
                           </div>
+                          {order.orderCode && (
+                            <div className="mb-2 flex items-center gap-2 rounded-xl px-3 py-1.5" style={{ backgroundColor: `${brand.primaryColor}12` }}>
+                              <span className="text-xs text-gray-400">Kode</span>
+                              <span className="text-base font-black tracking-widest" style={{ color: brand.primaryColor }}>{order.orderCode}</span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                             <p className="text-xs text-gray-400">{date}</p>
                             <p className="text-sm font-black" style={{ color: brand.primaryColor }}>{formatRupiah(order.totalAmount)}</p>
@@ -1094,32 +1173,92 @@ export function OrderApp() {
           </div>
         )}
 
-        {/* ── SUCCESS ── */}
+        {/* ── SUCCESS + INVOICE ── */}
         {view === "success" && (
-          <div className="flex h-full flex-col items-center justify-center bg-white px-6 text-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-50">
-              <CheckCircle size={42} className="text-green-500" />
+          <div className="flex h-full flex-col bg-gray-50">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-50">
+                <CheckCircle size={18} className="text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#1A0F0A]">Pesanan Berhasil!</p>
+                <p className="text-xs text-gray-400">Screenshot sebagai bukti pengambilan</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-black text-[#1A0F0A]" style={{ fontFamily: "var(--font-archivo)" }}>Pesanan Berhasil!</h2>
-              <p className="mt-1.5 text-sm text-gray-500">Pesanan kamu sudah kami terima.<br />Kami akan segera memprosesnya.</p>
-            </div>
-            <div className="mt-2 flex w-full flex-col gap-3">
+
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              {/* Invoice Card */}
+              <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+                {/* Brand header */}
+                <div className="px-4 py-3 text-center text-white" style={{ backgroundColor: brand.primaryColor }}>
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Bwaji Group</p>
+                  <p className="mt-0.5 text-base font-black">{brand.name}</p>
+                </div>
+
+                {/* Order code — besar dan jelas */}
+                <div className="border-b border-dashed border-gray-200 px-4 py-4 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Kode Pesanan</p>
+                  <p
+                    className="mt-1 text-5xl font-black tracking-widest"
+                    style={{ color: brand.primaryColor, fontFamily: "var(--font-archivo)" }}
+                  >
+                    {orderCode ?? "—"}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">Tunjukkan kode ini saat mengambil pesanan</p>
+                </div>
+
+                {/* Customer info */}
+                <div className="border-b border-dashed border-gray-200 px-4 py-3 space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Nama</span>
+                    <span className="font-semibold text-gray-800">{receiptName}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Tanggal</span>
+                    <span className="font-medium text-gray-700">
+                      {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="border-b border-dashed border-gray-200 px-4 py-3 space-y-2">
+                  {receiptItems.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-700">{item.name} <span className="text-gray-400">×{item.qty}</span></span>
+                      <span className="font-medium text-gray-800">{formatRupiah(item.price * item.qty)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total */}
+                <div className="px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-900">Total</span>
+                  <span className="text-lg font-black" style={{ color: brand.primaryColor }}>{formatRupiah(totalAmount)}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
               <button
-                onClick={() => {
-                  setHistorySearched(false);
-                  setView("history");
-                }}
-                className="w-full rounded-2xl py-3.5 text-sm font-bold text-white"
+                onClick={printReceipt}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white"
                 style={{ backgroundColor: brand.primaryColor }}
+              >
+                <Receipt size={16} />
+                Cetak Struk
+              </button>
+              <button
+                onClick={() => { setHistorySearched(false); setView("history"); }}
+                className="w-full rounded-2xl border border-gray-200 bg-white py-3.5 text-sm font-medium text-gray-600"
               >
                 Lihat Status Pesananku
               </button>
               <button
                 onClick={() => setView("beranda")}
-                className="w-full rounded-2xl border border-gray-200 py-3.5 text-sm font-medium text-gray-600"
+                className="w-full rounded-2xl border border-gray-200 bg-white py-3.5 text-sm font-medium text-gray-600"
               >
-                Kembali ke Beranda
+                Pesan Lagi
               </button>
             </div>
           </div>

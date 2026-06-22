@@ -59,6 +59,7 @@ export const menuItems = pgTable("menu_items", {
 // ─── Orders ──────────────────────────────────────────────────────────────────
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().defaultRandom(),
+  orderCode: text("order_code"),
   brandSlug: brandEnum("brand_slug").notNull(),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),

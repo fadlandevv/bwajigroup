@@ -23,6 +23,17 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(allOrders);
 }
 
+function generateOrderCode(): string {
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const digits = "123456789";
+  return (
+    letters[Math.floor(Math.random() * letters.length)] +
+    letters[Math.floor(Math.random() * letters.length)] +
+    digits[Math.floor(Math.random() * digits.length)] +
+    digits[Math.floor(Math.random() * digits.length)]
+  );
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = createOrderSchema.safeParse(body);
@@ -61,6 +72,7 @@ export async function POST(req: NextRequest) {
   const [order] = await db
     .insert(orders)
     .values({
+      orderCode: generateOrderCode(),
       brandSlug, customerName, customerPhone, customerNote,
       paymentMethod, deliveryType, deliveryAddress: deliveryAddress ?? null, totalAmount,
     })

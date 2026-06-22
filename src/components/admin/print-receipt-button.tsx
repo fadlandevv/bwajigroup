@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import { Receipt } from "lucide-react";
 
 const BRAND_NAMES: Record<string, string> = {
   "dapur-bwaji": "Dapur Bwaji",
@@ -148,7 +148,7 @@ export function PrintReceiptButton({ order, items }: { order: Order; items: Item
       onClick={handlePrint}
       className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-80 active:scale-95"
     >
-      <Printer size={15} />
+      <Receipt size={15} />
       Cetak Struk
     </button>
   );

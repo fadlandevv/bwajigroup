@@ -63,7 +63,7 @@ export default async function OrderDetailPage({
             </div>
           </div>
         }
-        description={`#${order.id.slice(0, 8).toUpperCase()}`}
+        description={order.orderCode ? `Kode: ${order.orderCode} · #${order.id.slice(0, 8).toUpperCase()}` : `#${order.id.slice(0, 8).toUpperCase()}`}
         action={
           <PrintReceiptButton
             order={{ ...order, createdAt: order.createdAt.toISOString() }}
