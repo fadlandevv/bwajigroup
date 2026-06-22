@@ -786,7 +786,7 @@ export function OrderApp() {
             <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100">
               <ArrowLeft size={19} />
             </Link>
-            <div className="rounded-xl px-3 py-2 text-center text-xs font-semibold" style={{ backgroundColor: `${brand.primaryColor}15`, color: brand.primaryColor }}>{brand.name}</div>
+            <span />
             <button
               onClick={() => setView("keranjang")}
               className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-gray-100"
