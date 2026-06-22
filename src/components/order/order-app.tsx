@@ -27,10 +27,21 @@ type OrderHistory = {
   brandSlug: string;
   customerName: string;
   customerPhone: string;
+  customerNote: string | null;
   status: string;
   paymentMethod: string;
+  deliveryType: string;
+  deliveryAddress: string | null;
   totalAmount: number;
   createdAt: string;
+};
+
+type OrderItem = {
+  id: string;
+  menuItemName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
 };
 
 const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "chat" | "keranjang" | "profil">; Icon: typeof Home; label: string }> = [
@@ -168,6 +179,8 @@ export function OrderApp() {
   const [historyOrders, setHistoryOrders] = useState<OrderHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historySearched, setHistorySearched] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<(OrderHistory & { items: OrderItem[] }) | null>(null);
+  const [orderDetailLoading, setOrderDetailLoading] = useState(false);
   const [lastOrderPhone, setLastOrderPhone] = useState<string | null>(null);
 
   // Profile state
@@ -730,6 +743,19 @@ export function OrderApp() {
     win.document.close();
   }
 
+  async function openOrderDetail(order: OrderHistory) {
+    setOrderDetailLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`);
+      const data = await res.json();
+      setSelectedOrder({ ...order, items: data.items ?? [] });
+    } catch {
+      setSelectedOrder({ ...order, items: [] });
+    } finally {
+      setOrderDetailLoading(false);
+    }
+  }
+
   async function searchHistory() {
     setHistoryLoading(true);
     setHistorySearched(false);
@@ -965,7 +991,11 @@ export function OrderApp() {
                         day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
                       });
                       return (
-                        <div key={order.id} className="rounded-2xl bg-white p-4 shadow-sm">
+                        <button
+                          key={order.id}
+                          onClick={() => openOrderDetail(order)}
+                          className="w-full rounded-2xl bg-white p-4 shadow-sm text-left active:scale-[0.98] transition-transform"
+                        >
                           <div className="mb-2 flex items-start justify-between gap-2">
                             <div>
                               <p className="text-xs font-semibold text-gray-400">{brandName}</p>
@@ -985,7 +1015,7 @@ export function OrderApp() {
                             <p className="text-xs text-gray-400">{date}</p>
                             <p className="text-sm font-black" style={{ color: brand.primaryColor }}>{formatRupiah(order.totalAmount)}</p>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -1477,6 +1507,82 @@ export function OrderApp() {
                 Pesan Lagi
               </button>
             </div>
+          </div>
+        )}
+
+        {/* ── ORDER DETAIL OVERLAY ── */}
+        {selectedOrder && (
+          <div className="absolute inset-0 z-50 flex flex-col bg-white">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-4">
+              <button onClick={() => setSelectedOrder(null)} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100">
+                <ArrowLeft size={19} className="text-gray-600" />
+              </button>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-[#1A0F0A]">Detail Pesanan</p>
+                {selectedOrder.orderCode && (
+                  <p className="text-xs font-black tracking-widest" style={{ color: brand.primaryColor }}>
+                    {selectedOrder.orderCode}
+                  </p>
+                )}
+              </div>
+              {(() => {
+                const s = STATUS_LABEL[selectedOrder.status] ?? { label: selectedOrder.status, color: "#6b7280", bg: "#f3f4f6" };
+                return (
+                  <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ color: s.color, backgroundColor: s.bg }}>
+                    {s.label}
+                  </span>
+                );
+              })()}
+            </div>
+
+            {orderDetailLoading ? (
+              <div className="flex flex-1 items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-600" />
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+                {/* Info */}
+                <div className="rounded-2xl bg-gray-50 p-4 space-y-2">
+                  {[
+                    { label: "Brand", value: selectedOrder.brandSlug === "dapur-bwaji" ? "Dapur Bwaji" : "Hoki Dimsum" },
+                    { label: "Nama", value: selectedOrder.customerName },
+                    { label: "Pembayaran", value: selectedOrder.paymentMethod.toUpperCase() },
+                    { label: "Pengiriman", value: selectedOrder.deliveryType === "pickup" ? "Ambil di tempat" : "Delivery" },
+                    ...(selectedOrder.deliveryAddress ? [{ label: "Alamat", value: selectedOrder.deliveryAddress }] : []),
+                    ...(selectedOrder.customerNote ? [{ label: "Catatan", value: selectedOrder.customerNote }] : []),
+                    { label: "Tanggal", value: new Date(selectedOrder.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-start justify-between gap-3">
+                      <span className="text-xs text-gray-400 shrink-0">{label}</span>
+                      <span className="text-xs font-medium text-gray-800 text-right">{value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Items */}
+                <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-700">Item Pesanan</p>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {selectedOrder.items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between px-4 py-3">
+                        <div className="flex-1 min-w-0 pr-3">
+                          <p className="text-sm font-medium text-gray-900">{item.menuItemName}</p>
+                          <p className="text-xs text-gray-400">{formatRupiah(item.unitPrice)} × {item.quantity}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 shrink-0">{formatRupiah(item.subtotal)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
+                    <span className="text-sm font-bold text-gray-900">Total</span>
+                    <span className="text-base font-black" style={{ color: brand.primaryColor }}>{formatRupiah(selectedOrder.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
