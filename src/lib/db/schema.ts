@@ -35,6 +35,8 @@ export const customers = pgTable("customers", {
   name: text("name").notNull(),
   phone: text("phone").notNull().unique(),
   password: text("password").notNull(),
+  address: text("address").notNull().default(""),
+  avatar: text("avatar"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

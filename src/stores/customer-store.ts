@@ -5,6 +5,8 @@ export type CustomerSession = {
   id: string;
   name: string;
   phone: string;
+  address: string;
+  avatar: string | null;
 };
 
 type CustomerStore = {

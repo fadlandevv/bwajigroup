@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   ArrowLeft, ShoppingBag, Plus, Minus, Home, UtensilsCrossed,
-  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send, X, Receipt,
+  Copy, CheckCircle2, CheckCircle, Clock, Search, Download, Upload, ImageIcon, MessageSquare, Send, X, Receipt, CircleUser, Camera, Eye, EyeOff, MapPin, Lock, ChevronRight,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { useCustomerStore } from "@/stores/customer-store";
@@ -18,7 +18,7 @@ import type { MenuItem } from "@/types/menu";
 import { formatRupiah } from "@/lib/utils";
 import { orderFormSchema } from "@/lib/validations/order";
 
-type View = "auth" | "beranda" | "menu" | "history" | "chat" | "keranjang" | "checkout" | "payment" | "success";
+type View = "auth" | "beranda" | "menu" | "history" | "chat" | "keranjang" | "checkout" | "payment" | "success" | "profil";
 type CheckoutFormData = z.infer<typeof orderFormSchema>;
 
 type OrderHistory = {
@@ -33,12 +33,12 @@ type OrderHistory = {
   createdAt: string;
 };
 
-const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "chat" | "keranjang">; Icon: typeof Home; label: string }> = [
+const TABS: Array<{ tab: Extract<View, "beranda" | "menu" | "history" | "chat" | "keranjang" | "profil">; Icon: typeof Home; label: string }> = [
   { tab: "beranda", Icon: Home, label: "Beranda" },
   { tab: "menu", Icon: UtensilsCrossed, label: "Menu" },
   { tab: "history", Icon: Clock, label: "History" },
   { tab: "keranjang", Icon: ShoppingBag, label: "Keranjang" },
-  { tab: "chat", Icon: MessageSquare, label: "Chat" },
+  { tab: "profil", Icon: CircleUser, label: "Profil" },
 ];
 
 interface CardProps {
@@ -170,6 +170,18 @@ export function OrderApp() {
   const [historySearched, setHistorySearched] = useState(false);
   const [lastOrderPhone, setLastOrderPhone] = useState<string | null>(null);
 
+  // Profile state
+  const [profileSection, setProfileSection] = useState<"main" | "name" | "address" | "password">("main");
+  const [profileName, setProfileName] = useState("");
+  const [profileAddress, setProfileAddress] = useState("");
+  const [profileCurrentPw, setProfileCurrentPw] = useState("");
+  const [profileNewPw, setProfileNewPw] = useState("");
+  const [profileConfirmPw, setProfileConfirmPw] = useState("");
+  const [profileShowPw, setProfileShowPw] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
+
   // Auth form state
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authPhone, setAuthPhone] = useState("");
@@ -182,6 +194,15 @@ export function OrderApp() {
   useEffect(() => {
     if (!customer && view !== "auth") setView("auth");
   }, [customer, view]);
+
+  // Sync profile avatar from customer session
+  useEffect(() => {
+    if (view === "profil" && customer) {
+      setProfileAvatar(customer.avatar ?? null);
+      setProfileSection("main");
+      setProfileMsg(null);
+    }
+  }, [view, customer]);
 
   // Chat state
   const [chatSessionId, setChatSessionId] = useState("");
@@ -381,19 +402,11 @@ export function OrderApp() {
   if (!selectedBrand) {
     return (
       <div className="flex h-full flex-col bg-[#FFFCF8]">
-        <div className="flex items-center justify-between px-5 pb-4 pt-5">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-[#FAF3EB]">
-              <ArrowLeft size={19} />
-            </Link>
-            <span className="text-sm font-medium text-[#7A6955]">Kembali ke Home</span>
-          </div>
-          <button
-            onClick={() => { clearCustomer(); setView("auth"); setSelectedBrand(null); }}
-            className="text-xs font-medium text-gray-400 hover:text-red-500"
-          >
-            Keluar
-          </button>
+        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
+          <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full text-[#7A6955] hover:bg-[#FAF3EB]">
+            <ArrowLeft size={19} />
+          </Link>
+          <span className="text-sm font-medium text-[#7A6955]">Kembali ke Home</span>
         </div>
 
         <div className="px-5 pb-8 pt-4">
@@ -573,13 +586,67 @@ export function OrderApp() {
       });
       const data = await res.json();
       if (!res.ok) { setAuthError(data.error ?? "Terjadi kesalahan"); return; }
-      setCustomer({ id: data.id, name: data.name, phone: data.phone });
+      setCustomer({ id: data.id, name: data.name, phone: data.phone, address: data.address ?? "", avatar: data.avatar ?? null });
       setView("beranda");
       setAuthPhone(""); setAuthPassword(""); setAuthName(""); setAuthError("");
     } catch {
       setAuthError("Tidak bisa terhubung ke server.");
     } finally {
       setAuthLoading(false);
+    }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      const canvas = document.createElement("canvas");
+      const max = 400;
+      let { width, height } = img;
+      if (width > max || height > max) {
+        if (width > height) { height = Math.round(height * max / width); width = max; }
+        else { width = Math.round(width * max / height); height = max; }
+      }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      const b64 = canvas.toDataURL("image/jpeg", 0.8);
+      setProfileAvatar(b64);
+      // Auto-save avatar
+      if (!customer) return;
+      const res = await fetch("/api/customer", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: customer.id, avatar: b64 }) });
+      if (res.ok) { const d = await res.json(); setCustomer({ ...customer, ...d }); }
+    };
+    img.src = url;
+  }
+
+  async function saveProfile(field: "name" | "address" | "password") {
+    if (!customer) return;
+    setProfileSaving(true);
+    setProfileMsg(null);
+    try {
+      const body: Record<string, string> = { id: customer.id };
+      if (field === "name") {
+        if (profileName.trim().length < 2) { setProfileMsg({ type: "err", text: "Nama minimal 2 karakter" }); return; }
+        body.name = profileName.trim();
+      }
+      if (field === "address") body.address = profileAddress;
+      if (field === "password") {
+        if (profileNewPw !== profileConfirmPw) { setProfileMsg({ type: "err", text: "Konfirmasi password tidak cocok" }); return; }
+        body.currentPassword = profileCurrentPw;
+        body.newPassword = profileNewPw;
+      }
+      const res = await fetch("/api/customer", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const d = await res.json();
+      if (!res.ok) { setProfileMsg({ type: "err", text: d.error ?? "Gagal menyimpan" }); return; }
+      setCustomer({ ...customer, ...d });
+      setProfileMsg({ type: "ok", text: "Berhasil disimpan!" });
+      setProfileCurrentPw(""); setProfileNewPw(""); setProfileConfirmPw("");
+      setTimeout(() => { setProfileMsg(null); setProfileSection("main"); }, 1500);
+    } catch {
+      setProfileMsg({ type: "err", text: "Tidak bisa terhubung ke server" });
+    } finally {
+      setProfileSaving(false);
     }
   }
 
@@ -1403,6 +1470,198 @@ export function OrderApp() {
           </div>
         )}
 
+        {/* ── PROFIL ── */}
+        {view === "profil" && (
+          <div className="flex-1 overflow-y-auto">
+            {/* Header profil */}
+            <div className="px-4 pt-5 pb-4">
+              {profileSection !== "main" ? (
+                <button onClick={() => { setProfileSection("main"); setProfileMsg(null); }} className="mb-4 flex items-center gap-1.5 text-sm font-medium text-gray-500">
+                  <ArrowLeft size={16} /> Kembali
+                </button>
+              ) : null}
+
+              {/* Avatar + nama */}
+              {profileSection === "main" && (
+                <div className="flex flex-col items-center pb-6">
+                  <div className="relative mb-3">
+                    <div className="h-24 w-24 overflow-hidden rounded-full bg-gray-100 ring-4 ring-white shadow-md">
+                      {profileAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={profileAvatar} alt="Avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center" style={{ backgroundColor: `${brand.primaryColor}20` }}>
+                          <CircleUser size={44} style={{ color: brand.primaryColor }} />
+                        </div>
+                      )}
+                    </div>
+                    <label className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white shadow-md" style={{ backgroundColor: brand.primaryColor }}>
+                      <Camera size={14} />
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])} />
+                    </label>
+                  </div>
+                  <p className="text-lg font-black text-[#1A0F0A]">{customer?.name}</p>
+                  <p className="text-sm text-gray-400">{customer?.phone}</p>
+                </div>
+              )}
+            </div>
+
+            {/* ── MAIN MENU ── */}
+            {profileSection === "main" && (
+              <div className="px-4 space-y-2 pb-8">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-400">Informasi Akun</p>
+
+                <button onClick={() => { setProfileName(customer?.name ?? ""); setProfileSection("name"); setProfileMsg(null); }}
+                  className="flex w-full items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${brand.primaryColor}15` }}>
+                      <CircleUser size={18} style={{ color: brand.primaryColor }} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs text-gray-400">Nama</p>
+                      <p className="text-sm font-semibold text-gray-800">{customer?.name}</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300" />
+                </button>
+
+                <button onClick={() => { setProfileAddress(customer?.address ?? ""); setProfileSection("address"); setProfileMsg(null); }}
+                  className="flex w-full items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${brand.primaryColor}15` }}>
+                      <MapPin size={18} style={{ color: brand.primaryColor }} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs text-gray-400">Alamat</p>
+                      <p className="text-sm font-semibold text-gray-800">{customer?.address || "Belum diisi"}</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300" />
+                </button>
+
+                <button onClick={() => { setProfileSection("password"); setProfileMsg(null); }}
+                  className="flex w-full items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${brand.primaryColor}15` }}>
+                      <Lock size={18} style={{ color: brand.primaryColor }} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs text-gray-400">Password</p>
+                      <p className="text-sm font-semibold text-gray-800">••••••••</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300" />
+                </button>
+
+                <div className="pt-4">
+                  <button
+                    onClick={() => { clearCustomer(); setView("auth"); setSelectedBrand(null); }}
+                    className="w-full rounded-2xl border border-red-100 bg-red-50 py-3.5 text-sm font-semibold text-red-500"
+                  >
+                    Keluar dari Akun
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── EDIT NAMA ── */}
+            {profileSection === "name" && (
+              <div className="px-4 pb-8">
+                <p className="mb-4 text-sm text-gray-500">Ubah nama yang tampil di pesanan kamu.</p>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Nama Lengkap</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                />
+                {profileMsg && (
+                  <div className={`mt-3 rounded-xl px-4 py-3 text-sm ${profileMsg.type === "ok" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+                    {profileMsg.text}
+                  </div>
+                )}
+                <button
+                  onClick={() => saveProfile("name")}
+                  disabled={profileSaving}
+                  className="mt-4 w-full rounded-2xl py-3.5 text-sm font-bold text-white disabled:opacity-60"
+                  style={{ backgroundColor: brand.primaryColor }}
+                >
+                  {profileSaving ? "Menyimpan..." : "Simpan Nama"}
+                </button>
+              </div>
+            )}
+
+            {/* ── EDIT ALAMAT ── */}
+            {profileSection === "address" && (
+              <div className="px-4 pb-8">
+                <p className="mb-4 text-sm text-gray-500">Alamat untuk pengiriman order kamu.</p>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-500">Alamat Lengkap</label>
+                <textarea
+                  value={profileAddress}
+                  onChange={(e) => setProfileAddress(e.target.value)}
+                  rows={4}
+                  placeholder="Jl. Contoh No. 1, Kelurahan, Kecamatan, Kota..."
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 resize-none"
+                />
+                {profileMsg && (
+                  <div className={`mt-3 rounded-xl px-4 py-3 text-sm ${profileMsg.type === "ok" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+                    {profileMsg.text}
+                  </div>
+                )}
+                <button
+                  onClick={() => saveProfile("address")}
+                  disabled={profileSaving}
+                  className="mt-4 w-full rounded-2xl py-3.5 text-sm font-bold text-white disabled:opacity-60"
+                  style={{ backgroundColor: brand.primaryColor }}
+                >
+                  {profileSaving ? "Menyimpan..." : "Simpan Alamat"}
+                </button>
+              </div>
+            )}
+
+            {/* ── GANTI PASSWORD ── */}
+            {profileSection === "password" && (
+              <div className="px-4 pb-8 space-y-4">
+                <p className="text-sm text-gray-500">Masukkan password lama lalu buat password baru.</p>
+                {[
+                  { label: "Password Lama", val: profileCurrentPw, set: setProfileCurrentPw },
+                  { label: "Password Baru", val: profileNewPw, set: setProfileNewPw },
+                  { label: "Konfirmasi Password Baru", val: profileConfirmPw, set: setProfileConfirmPw },
+                ].map(({ label, val, set }) => (
+                  <div key={label}>
+                    <label className="mb-1.5 block text-xs font-semibold text-gray-500">{label}</label>
+                    <div className="relative">
+                      <input
+                        type={profileShowPw ? "text" : "password"}
+                        value={val}
+                        onChange={(e) => set(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3.5 pr-11 text-sm text-gray-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                      />
+                      <button type="button" onClick={() => setProfileShowPw(!profileShowPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                        {profileShowPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {profileMsg && (
+                  <div className={`rounded-xl px-4 py-3 text-sm ${profileMsg.type === "ok" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+                    {profileMsg.text}
+                  </div>
+                )}
+                <button
+                  onClick={() => saveProfile("password")}
+                  disabled={profileSaving}
+                  className="w-full rounded-2xl py-3.5 text-sm font-bold text-white disabled:opacity-60"
+                  style={{ backgroundColor: brand.primaryColor }}
+                >
+                  {profileSaving ? "Menyimpan..." : "Ganti Password"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* ── BOTTOM NAV (hanya untuk beranda/menu/keranjang) ── */}
@@ -1419,9 +1678,16 @@ export function OrderApp() {
               return (
                 <button key={tab} onClick={handleTabClick} className="flex flex-col items-center gap-1">
                   <div className="relative">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors" style={isActive ? { backgroundColor: `${brand.primaryColor}18` } : {}}>
-                      <Icon size={21} style={{ color: isActive ? brand.primaryColor : "#9ca3af" }} />
-                    </div>
+                    {tab === "profil" && customer?.avatar ? (
+                      <div className="h-10 w-10 overflow-hidden rounded-xl transition-all" style={isActive ? { outline: `2px solid ${brand.primaryColor}` } : {}}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={customer.avatar} alt="avatar" className="h-full w-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors" style={isActive ? { backgroundColor: `${brand.primaryColor}18` } : {}}>
+                        <Icon size={21} style={{ color: isActive ? brand.primaryColor : "#9ca3af" }} />
+                      </div>
+                    )}
                     {showBadge && (
                       <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: brand.primaryColor }}>
                         {totalItems}

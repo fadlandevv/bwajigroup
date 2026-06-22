@@ -97,6 +97,8 @@ export async function GET(req: NextRequest) {
     )
   `);
   await run("orders.customer_id", `ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "customer_id" uuid REFERENCES "customers"("id") ON DELETE SET NULL`);
+  await run("customers.address", `ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "address" text NOT NULL DEFAULT ''`);
+  await run("customers.avatar", `ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "avatar" text`);
 
   // ── Chat Messages table ──────────────────────────────────────────────────
   await run("chat_messages table", `
