@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatRupiah } from "@/lib/utils";
 import { OrderStatusUpdater } from "@/components/admin/order-status-updater";
 import { OrderTimerBar } from "@/components/admin/order-timer-bar";
+import { PrintReceiptButton } from "@/components/admin/print-receipt-button";
 import { PageHeader, PageContent } from "@/components/admin/page-header";
 
 export const metadata: Metadata = { title: "Detail Order" };
@@ -63,6 +64,12 @@ export default async function OrderDetailPage({
           </div>
         }
         description={`#${order.id.slice(0, 8).toUpperCase()}`}
+        action={
+          <PrintReceiptButton
+            order={{ ...order, createdAt: order.createdAt.toISOString() }}
+            items={items.map((i) => ({ ...i, unitPrice: Number(i.unitPrice), subtotal: Number(i.subtotal) }))}
+          />
+        }
       />
 
       <PageContent className="space-y-4">
