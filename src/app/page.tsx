@@ -1,17 +1,21 @@
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowRight, CheckCircle } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { Marquee } from "@/components/ui/marquee";
 import { BRANDS } from "@/types/brand";
 
-const ticker1 = ["Bwaji Group", "Grup Kuliner Indonesia", "Est. 2024", "Halal", "Cita Rasa Terbaik", "Bwaji Group", "Dua Brand", "Satu Semangat"];
-const ticker2 = ["Dapur Bwaji", "Hoki Dimsum", "Masakan Nusantara", "Dimsum Premium", "Fresh Daily", "Bahan Pilihan"];
+const stats = [
+  { v: "2", l: "Brand Kuliner" },
+  { v: "50+", l: "Varian Menu" },
+  { v: "4.9★", l: "Rating Rata-rata" },
+  { v: "100%", l: "Halal & Fresh" },
+];
 
 const values = [
-  { num: "01", title: "Kualitas Tanpa Kompromi", desc: "Bahan segar pilihan dan bumbu terbaik di setiap hidangan." },
-  { num: "02", title: "Konsisten & Terpercaya", desc: "Standar rasa yang sama di setiap porsi, setiap hari." },
-  { num: "03", title: "Untuk Semua Kalangan", desc: "Harga terjangkau tanpa mengorbankan kualitas." },
+  { title: "Bahan Segar Pilihan", desc: "Setiap menu dimasak dari bahan yang fresh, dipilih langsung setiap paginya." },
+  { title: "Rasa Autentik Nusantara", desc: "Resep bumbu rempah asli khas Indonesia yang sudah kami racik sendiri." },
+  { title: "Harga yang Terjangkau", desc: "Kualitas terbaik dengan harga yang ramah di kantong untuk semua kalangan." },
 ];
 
 export default function HomePage() {
@@ -20,162 +24,195 @@ export default function HomePage() {
       <Navbar />
       <main>
 
-        {/* ── 1. HERO ── */}
-        <section className="relative flex min-h-screen flex-col overflow-hidden bg-[#1D1A40]">
-          <div className="flex flex-1 flex-col justify-center px-4 pt-20 lg:px-6">
-            <h1
-              className="font-black uppercase leading-[0.88] text-white"
-              style={{
-                fontFamily: "var(--font-archivo)",
-                fontSize: "clamp(5rem, 26vw, 32rem)",
-                letterSpacing: "-0.025em",
-              }}
-            >
-              BWAJI<br />
-              <span className="text-[#F97316]">GROUP.</span>
-            </h1>
-          </div>
+        {/* ── HERO ── */}
+        <section className="bg-[#FFFCF8] px-5 pt-16 lg:px-8">
+          <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-10 py-24 md:flex-row md:gap-16">
 
-          {/* Food image */}
-          <div className="pointer-events-none absolute bottom-16 left-1/2 z-10 h-[55%] w-[30%] min-w-[200px] max-w-[360px] -translate-x-1/2 sm:bottom-12">
-            <Image
-              src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=700&q=85"
-              alt="Featured Food"
-              fill
-              className="object-contain object-bottom drop-shadow-2xl"
-            />
-          </div>
+            {/* Text */}
+            <div className="flex-1">
+              <span className="inline-block rounded-full bg-[#FEF2F2] px-4 py-1.5 text-xs font-semibold text-[#C0272D]">
+                Grup Kuliner Indonesia 🇮🇩
+              </span>
+              <h1
+                className="mt-5 text-5xl font-black leading-tight text-[#1A0F0A] sm:text-6xl lg:text-7xl"
+                style={{ fontFamily: "var(--font-archivo)", letterSpacing: "-0.02em" }}
+              >
+                Cita Rasa<br />
+                Rumahan yang<br />
+                <span className="text-[#C0272D]">Menggugah.</span>
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-relaxed text-[#7A6955]">
+                Bwaji Group menghadirkan pengalaman makan terbaik melalui dua brand kuliner unggulan — masakan nusantara dan dimsum premium.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link
+                  href="/produk"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#C0272D] px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-85"
+                >
+                  Lihat Produk <ArrowRight size={15} />
+                </Link>
+                <Link
+                  href="/about"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#E8D5C0] bg-white px-6 py-3 text-sm font-semibold text-[#1A0F0A] transition-colors hover:bg-[#FAF3EB]"
+                >
+                  Tentang Kami
+                </Link>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-5">
+                {["Halal", "Fresh Daily", "Bumbu Rempah Asli"].map((t) => (
+                  <div key={t} className="flex items-center gap-1.5 text-sm text-[#7A6955]">
+                    <CheckCircle size={14} className="text-[#C0272D]" />
+                    {t}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          {/* Badge */}
-          <div className="absolute right-5 top-[40%] z-20 flex h-24 w-24 -rotate-12 select-none items-center justify-center rounded-full bg-[#FE7BFF] p-3 text-center text-[10px] font-black leading-tight text-[#1D1A40] sm:h-28 sm:w-28 sm:text-[11px] lg:right-10">
-            Cita<br />Rasa<br />Terbaik!
-          </div>
-
-          {/* Bottom bar */}
-          <div className="relative z-20 flex items-center justify-between border-t border-white/10 px-4 py-4 lg:px-6">
-            <p className="text-sm text-white/50">Grup Kuliner Indonesia</p>
-            <Link href="/about" className="text-sm text-white/50 hover:text-white transition-colors">
-              Tentang Kami ↗
-            </Link>
+            {/* Image */}
+            <div className="relative w-full flex-1 md:max-w-[460px]">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-[#FAF3EB]">
+                <Image
+                  src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&q=85"
+                  alt="Bwaji Group Food"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              <div className="absolute -bottom-4 -left-4 rounded-2xl bg-white p-4 shadow-lg shadow-black/10">
+                <p className="text-xs font-medium text-[#7A6955]">Rating Pelanggan</p>
+                <p
+                  className="text-2xl font-black text-[#1A0F0A]"
+                  style={{ fontFamily: "var(--font-archivo)" }}
+                >
+                  4.9 ★
+                </p>
+              </div>
+              <div className="absolute -right-4 top-8 rounded-2xl bg-[#C0272D] p-4 text-white shadow-lg shadow-red-900/20">
+                <p className="text-xs font-medium opacity-80">Menu Tersedia</p>
+                <p
+                  className="text-2xl font-black"
+                  style={{ fontFamily: "var(--font-archivo)" }}
+                >
+                  50+
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ── 2. TICKER ── */}
-        <div className="overflow-hidden border-y-4 border-[#1D1A40] bg-[#93F3AA] py-3">
-          <Marquee items={ticker1} className="text-[#1D1A40]" />
+        {/* ── STATS ── */}
+        <div className="border-y border-[#E8D5C0] bg-[#FAF3EB]">
+          <div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-[#E8D5C0] px-5 sm:grid-cols-4 lg:px-8">
+            {stats.map(({ v, l }) => (
+              <div key={l} className="py-7 text-center">
+                <p
+                  className="text-3xl font-black text-[#1A0F0A]"
+                  style={{ fontFamily: "var(--font-archivo)" }}
+                >
+                  {v}
+                </p>
+                <p className="mt-1 text-xs text-[#7A6955]">{l}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* ── 3. ABOUT — split dark + light, K-Lane section 2 ── */}
-        <section className="grid grid-cols-1 md:grid-cols-2">
-          {/* Left: dark, cerita grup */}
-          <div className="bg-[#1D1A40] px-8 py-16 md:px-12 md:py-20">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/40">Tentang Bwaji Group</p>
-            <h2
-              className="mt-4 text-4xl font-black leading-[1.05] text-white lg:text-5xl"
-              style={{ fontFamily: "var(--font-archivo)" }}
-            >
-              Satu grup,<br />
-              <span className="text-[#93F3AA]">banyak rasa.</span>
-            </h2>
-            <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/60">
-              Bwaji Group adalah rumah bagi brand-brand kuliner terbaik Indonesia. Lahir dari passion dan dedikasi untuk menghadirkan makanan berkualitas tinggi, lezat, dan selalu fresh.
-            </p>
-            <Link href="/about"
-              className="mt-8 inline-flex rounded-full bg-white px-6 py-3 text-sm font-bold text-[#1D1A40] hover:bg-[#93F3AA] transition-colors"
-            >
-              Selengkapnya ↗
-            </Link>
-          </div>
+        {/* ── BRAND SECTION ── */}
+        <section className="bg-[#FFFCF8] px-5 py-20 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-12 text-center">
+              <span className="text-xs font-semibold uppercase tracking-widest text-[#C0272D]">Brand Kami</span>
+              <h2
+                className="mt-2 text-4xl font-black text-[#1A0F0A]"
+                style={{ fontFamily: "var(--font-archivo)" }}
+              >
+                Dua Brand, Satu Semangat
+              </h2>
+              <p className="mt-3 text-sm text-[#7A6955]">
+                Temukan menu favoritmu dari brand kuliner unggulan kami
+              </p>
+            </div>
 
-          {/* Right: light, stats */}
-          <div className="bg-[#EAEDF6] px-8 py-16 md:px-12 md:py-20">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#70758C]">Dalam Angka</p>
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              {[
-                { v: "2", l: "Brand Kuliner" },
-                { v: "50+", l: "Varian Menu" },
-                { v: "4.9★", l: "Rating Rata-rata" },
-                { v: "Daily", l: "Fresh Cook" },
-              ].map(({ v, l }) => (
-                <div key={l} className="rounded-2xl bg-white p-6">
-                  <p className="text-4xl font-black text-[#1D1A40]" style={{ fontFamily: "var(--font-archivo)" }}>{v}</p>
-                  <p className="mt-1 text-xs font-medium text-[#70758C]">{l}</p>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {BRANDS.map((brand) => (
+                <Link
+                  key={brand.slug}
+                  href={`/${brand.slug}`}
+                  className="group relative overflow-hidden rounded-3xl p-8 text-white transition-transform hover:-translate-y-1 hover:shadow-xl"
+                  style={{ backgroundColor: brand.primaryColor }}
+                >
+                  <div
+                    className="absolute inset-0 opacity-30"
+                    style={{
+                      backgroundImage: `radial-gradient(circle at 90% 10%, ${brand.accentColor}, transparent 50%)`,
+                    }}
+                  />
+                  <div className="relative">
+                    <span className="text-xs font-semibold uppercase tracking-widest opacity-70">Bwaji Group</span>
+                    <h3
+                      className="mt-2 text-3xl font-black"
+                      style={{ fontFamily: "var(--font-archivo)" }}
+                    >
+                      {brand.name}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed opacity-80">{brand.description}</p>
+                    <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold transition-colors group-hover:bg-white/30">
+                      Lihat Menu <ArrowRight size={14} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── VALUES ── */}
+        <section className="bg-[#FAF3EB] px-5 py-20 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-12 text-center">
+              <span className="text-xs font-semibold uppercase tracking-widest text-[#C0272D]">Kenapa Bwaji Group?</span>
+              <h2
+                className="mt-2 text-4xl font-black text-[#1A0F0A]"
+                style={{ fontFamily: "var(--font-archivo)" }}
+              >
+                Komitmen Kami
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              {values.map(({ title, desc }) => (
+                <div key={title} className="rounded-2xl bg-white p-8 shadow-sm shadow-black/5">
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FEF2F2]">
+                    <CheckCircle size={20} className="text-[#C0272D]" />
+                  </div>
+                  <h3 className="font-bold text-[#1A0F0A]">{title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#7A6955]">{desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── 4. BRAND SHOWCASE — split colored blocks, K-Lane section 3 ── */}
-        <section className="grid grid-cols-1 md:grid-cols-2">
-          {BRANDS.map((brand) => (
+        {/* ── CTA BANNER ── */}
+        <section className="bg-[#C0272D] px-5 py-16 lg:px-8">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div>
+              <h2
+                className="text-3xl font-black text-white sm:text-4xl"
+                style={{ fontFamily: "var(--font-archivo)" }}
+              >
+                Lapar? Pesan Sekarang.
+              </h2>
+              <p className="mt-2 text-sm text-white/70">
+                Fresh, lezat, dan siap diantar ke tempatmu.
+              </p>
+            </div>
             <Link
-              key={brand.slug}
-              href={`/${brand.slug}`}
-              className="group relative flex h-80 flex-col justify-end overflow-hidden p-8 md:h-[420px] md:p-10"
-              style={{ backgroundColor: brand.primaryColor }}
+              href="/produk"
+              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-[#C0272D] transition-opacity hover:opacity-90"
             >
-              {/* Watermark letter */}
-              <span
-                className="pointer-events-none absolute right-0 top-0 select-none font-black text-white/10"
-                style={{
-                  fontFamily: "var(--font-archivo)",
-                  fontSize: "clamp(8rem, 20vw, 18rem)",
-                  lineHeight: 1,
-                }}
-              >
-                {brand.name.split(" ").map(w => w[0]).join("")}
-              </span>
-
-              {/* Floating mini badge */}
-              <div
-                className="absolute right-6 top-6 flex h-16 w-16 rotate-12 items-center justify-center rounded-full text-center text-[10px] font-black leading-tight"
-                style={{ backgroundColor: brand.accentColor, color: "#1D1A40" }}
-              >
-                Lihat<br />Menu
-              </div>
-
-              <div className="relative">
-                <p className="text-xs font-bold uppercase tracking-widest text-white/60">Bwaji Group</p>
-                <h3
-                  className="mt-1 text-3xl font-black text-white transition-transform duration-300 group-hover:translate-x-1 md:text-4xl"
-                  style={{ fontFamily: "var(--font-archivo)" }}
-                >
-                  {brand.name}
-                </h3>
-                <p className="mt-1 text-sm text-white/70">{brand.tagline}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-white/80 group-hover:text-white transition-colors">
-                  Explore ↗
-                </span>
-              </div>
+              Lihat Menu <ArrowRight size={15} />
             </Link>
-          ))}
-        </section>
-
-        {/* ── 5. TICKER 2 ── */}
-        <div className="overflow-hidden border-y border-[#EAEDF6] bg-[#EAEDF6] py-3">
-          <Marquee items={ticker2} reverse className="text-[#70758C]" />
-        </div>
-
-        {/* ── 6. VALUES — K-Lane "Stay in touch" equivalent ── */}
-        <section className="bg-[#1D1A40] px-5 py-20 lg:px-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/40">Nilai Kami</p>
-          <h2
-            className="mt-4 text-5xl font-black leading-[1.0] text-white lg:text-6xl"
-            style={{ fontFamily: "var(--font-archivo)" }}
-          >
-            Kenapa<br />
-            <span className="text-[#93F3AA]">Bwaji Group?</span>
-          </h2>
-
-          <div className="mt-12 grid grid-cols-1 gap-px bg-white/10 sm:grid-cols-3">
-            {values.map(({ num, title, desc }) => (
-              <div key={num} className="bg-[#1D1A40] p-8">
-                <p className="text-4xl font-black text-white/20" style={{ fontFamily: "var(--font-archivo)" }}>{num}</p>
-                <p className="mt-4 text-lg font-black text-white" style={{ fontFamily: "var(--font-archivo)" }}>{title}</p>
-                <p className="mt-2 text-sm leading-relaxed text-white/50">{desc}</p>
-              </div>
-            ))}
           </div>
         </section>
 

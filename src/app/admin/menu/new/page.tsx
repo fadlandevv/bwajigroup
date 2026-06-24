@@ -2,26 +2,37 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { MenuForm } from "@/components/admin/menu-form";
+import { auth } from "@/lib/auth";
+import { getSessionBrand } from "@/lib/session-brand";
+import { PageHeader, PageContent } from "@/components/admin/page-header";
 
 export const metadata: Metadata = { title: "Tambah Menu" };
 
-export default function NewMenuPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href="/admin/menu"
-          className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-        >
-          <ChevronLeft size={15} /> Kembali
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Tambah Menu</h1>
-        <p className="text-sm text-gray-500">Isi detail menu baru</p>
-      </div>
+export default async function NewMenuPage() {
+  const session = await auth();
+  const brandFilter = getSessionBrand(session);
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <MenuForm mode="create" />
-      </div>
-    </div>
+  return (
+    <>
+      <PageHeader
+        title={
+          <div className="flex flex-col gap-1">
+            <Link
+              href="/admin/menu"
+              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 w-fit"
+            >
+              <ChevronLeft size={13} /> Kelola Menu
+            </Link>
+            <span>Tambah Menu</span>
+          </div>
+        }
+        description="Isi detail menu baru"
+      />
+      <PageContent>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <MenuForm mode="create" lockedBrand={brandFilter} />
+        </div>
+      </PageContent>
+    </>
   );
 }

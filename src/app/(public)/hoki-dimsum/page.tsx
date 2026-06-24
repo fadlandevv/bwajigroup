@@ -21,7 +21,8 @@ const tickerItems = ["Hakau Udang", "Siomay", "Cheong Fun", "NEW MENU", "Ceker S
 export default async function HokiDimsumPage() {
   let items: MenuItem[] = [];
   try {
-    items = (await db.select().from(menuItems).where(eq(menuItems.brandSlug, "hoki-dimsum"))) as MenuItem[];
+    const result = await db.select().from(menuItems).where(eq(menuItems.brandSlug, "hoki-dimsum"));
+    items = result.length > 0 ? (result as MenuItem[]) : dummyMenuHokiDimsum;
   } catch { items = dummyMenuHokiDimsum; }
 
   const featured = items.filter((i) => i.isFeatured).slice(0, 3);

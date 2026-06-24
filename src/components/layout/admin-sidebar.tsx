@@ -4,38 +4,55 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  UtensilsCrossed,
   ShoppingBag,
+  UtensilsCrossed,
+  TrendingUp,
+  MessageSquare,
+  User,
   LogOut,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Menu", href: "/admin/menu", icon: UtensilsCrossed },
-  { label: "Orders", href: "/admin/orders", icon: ShoppingBag },
+  { label: "Home", href: "/admin", icon: LayoutDashboard, exact: true },
+  { label: "Orders", href: "/admin/orders", icon: ShoppingBag, exact: false },
+  { label: "Menu", href: "/admin/menu", icon: UtensilsCrossed, exact: false },
+  { label: "Finance", href: "/admin/finance", icon: TrendingUp, exact: false },
+  { label: "Chat", href: "/admin/chat", icon: MessageSquare, exact: false },
+  { label: "Profile", href: "/admin/profile", icon: User, exact: false },
 ];
 
-export function AdminSidebar() {
+interface Props {
+  brandLabel?: string | null;
+}
+
+export function AdminSidebar({ brandLabel }: Props) {
   const pathname = usePathname();
 
+  function isActive(href: string, exact: boolean) {
+    return exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+  }
+
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-gray-200 bg-white">
-      <div className="flex h-16 items-center border-b border-gray-200 px-6">
+    <aside className="hidden md:flex h-screen w-60 flex-col border-r border-gray-200 bg-white">
+      <div className="flex h-16 flex-col justify-center border-b border-gray-200 px-6">
         <p className="text-lg font-bold text-gray-900">
           Bwaji<span className="text-orange-500">Admin</span>
         </p>
+        {brandLabel && (
+          <span className="text-xs font-medium text-orange-500">{brandLabel}</span>
+        )}
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        {navItems.map(({ label, href, icon: Icon }) => (
+        {navItems.map(({ label, href, icon: Icon, exact }) => (
           <Link
             key={href}
             href={href}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              pathname === href
+              isActive(href, exact)
                 ? "bg-orange-50 text-orange-600"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             )}

@@ -8,6 +8,13 @@
       "when": 1780469243689,
       "tag": "0000_windy_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781676716128,
+      "tag": "0001_nosy_sheva_callister",
+      "breakpoints": true
     }
   ]
 }

@@ -21,7 +21,8 @@ const tickerItems = ["Nasi Goreng", "Ayam Bakar Madu", "Rendang Sapi", "Soto Aya
 export default async function DapurBwajiPage() {
   let items: MenuItem[] = [];
   try {
-    items = (await db.select().from(menuItems).where(eq(menuItems.brandSlug, "dapur-bwaji"))) as MenuItem[];
+    const result = await db.select().from(menuItems).where(eq(menuItems.brandSlug, "dapur-bwaji"));
+    items = result.length > 0 ? (result as MenuItem[]) : dummyMenuDapurBwaji;
   } catch { items = dummyMenuDapurBwaji; }
 
   const featured = items.filter((i) => i.isFeatured).slice(0, 3);

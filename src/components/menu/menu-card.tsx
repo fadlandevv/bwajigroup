@@ -1,15 +1,8 @@
-"use client";
-
 import Image from "next/image";
-import { Plus } from "lucide-react";
-import { useCartStore } from "@/stores/cart-store";
 import { formatRupiah } from "@/lib/utils";
 import type { MenuItem } from "@/types/menu";
 
 export function MenuCard({ item }: { item: MenuItem }) {
-  const addItem = useCartStore((s) => s.addItem);
-  const openCart = useCartStore((s) => s.openCart);
-
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white transition-shadow hover:shadow-md">
       {/* Image */}
@@ -48,18 +41,11 @@ export function MenuCard({ item }: { item: MenuItem }) {
           </p>
         )}
 
-        {/* Price + Add — K-Lane style */}
-        <div className="mt-auto flex items-center justify-between pt-4">
+        {/* Price */}
+        <div className="mt-auto pt-4">
           <span className="rounded-full bg-[#EAEDF6] px-4 py-1.5 text-sm font-bold text-[#1D1A40]">
             {formatRupiah(item.price)}
           </span>
-          <button
-            onClick={() => { addItem(item); openCart(); }}
-            disabled={!item.isAvailable}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D1A40] text-white transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
-          >
-            <Plus size={16} />
-          </button>
         </div>
         {!item.isAvailable && (
           <p className="text-[11px] font-medium text-red-400">Sedang habis</p>
